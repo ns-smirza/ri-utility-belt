@@ -1,0 +1,19 @@
+[Unit]
+Description=RI Stacks Version Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=smirza
+Group=smirza
+WorkingDirectory=/home/smirza/rca-dashboard
+Environment="PATH=/home/smirza/.local/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/usr/bin/python3 /home/smirza/rca-dashboard/app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

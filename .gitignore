@@ -1,0 +1,27 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# --- Node / Vite ---
+node_modules/
+dist/
+.vite/
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- Secrets: never commit ---
+# Kubeconfigs, certs, tokens, env files are NOT part of this repo.
+*.yaml
+*.yml
+*.pem
+*.cfg
+*.key
+.env*
+!**/tsconfig*.json
