@@ -8,6 +8,7 @@ and curl-ing the in-cluster `provisioner-core-provisioner-tm` service's
 Read-only. Registered by app.py via create_tenant_finder_bp(cfg); cfg provides
 RANCHER_DIR and RUN_ENV.
 """
+
 import json
 import os
 import subprocess
@@ -55,7 +56,8 @@ def create_tenant_finder_bp(cfg):
         p = run(base + ["get", "namespaces", "--no-headers"])
         if p.returncode != 0:
             raise TenantFinderError(
-                "kubectl get namespaces failed for " + name, (p.stdout or "") + (p.stderr or "")
+                "kubectl get namespaces failed for " + name,
+                (p.stdout or "") + (p.stderr or ""),
             )
         ns = None
         for line in p.stdout.splitlines():
@@ -80,9 +82,14 @@ def create_tenant_finder_bp(cfg):
                 pod = parts[0]
                 break
         if not pod:
-            raise TenantFinderError("No running {} pod in {}".format(POD_GREP, ns), p.stdout)
+            raise TenantFinderError(
+                "No running {} pod in {}".format(POD_GREP, ns), p.stdout
+            )
 
-        p = run(base + ["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.containers[0].name}"])
+        p = run(
+            base
+            + ["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.containers[0].name}"]
+        )
         container = p.stdout.strip() or None
 
         exec_prefix = base + ["-n", ns, "exec", pod]
@@ -101,7 +108,10 @@ def create_tenant_finder_bp(cfg):
 
     def _search(stack, query):
         exec_prefix = _discover(stack)
-        p = run(exec_prefix + ["--", "curl", "-s", "--max-time", CURL_MAX_TIME, ORG_LIST_URL])
+        p = run(
+            exec_prefix
+            + ["--", "curl", "-s", "--max-time", CURL_MAX_TIME, ORG_LIST_URL]
+        )
         if p.returncode != 0:
             raise TenantFinderError(
                 "curl /org/list failed inside pod", (p.stdout or "") + (p.stderr or "")
@@ -113,7 +123,9 @@ def create_tenant_finder_bp(cfg):
 
         orgs = _extract_orgs(payload)
         if not orgs:
-            raise TenantFinderError("/org/list returned no org entries", p.stdout[:1000])
+            raise TenantFinderError(
+                "/org/list returned no org entries", p.stdout[:1000]
+            )
 
         needle = query.lower()
         matches = []
@@ -157,7 +169,10 @@ def create_tenant_finder_bp(cfg):
         try:
             return jsonify(_search(stack, query))
         except TenantFinderError as exc:
-            return jsonify({"ok": False, "error": exc.message, "output": exc.output}), 200
+            return (
+                jsonify({"ok": False, "error": exc.message, "output": exc.output}),
+                200,
+            )
         except subprocess.TimeoutExpired:
             return jsonify({"ok": False, "error": "operation timed out"}), 200
         except Exception as exc:  # noqa: BLE001

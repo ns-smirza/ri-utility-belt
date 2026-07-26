@@ -17,6 +17,10 @@ done
 
 is_npe() { case "$1" in *qa01*|*stg01*|*devint*) return 0;; *) return 1;; esac }
 
+# Per-call kubectl request timeouts so one slow/unreachable cluster can't stall the gather.
+GET_TIMEOUT=${GET_TIMEOUT:-15}
+EXEC_TIMEOUT=${EXEC_TIMEOUT:-30}
+
 for kube in *.yaml; do
   case "$mode" in
     npe)  is_npe "$kube" || continue ;;
@@ -26,13 +30,18 @@ for kube in *.yaml; do
   safe=$(printf '%s' "$kube" | tr '/' '_')
   out="$tmpdir/$safe.data"
 
+  # --- pods: one table call (name+status) + one jsonpath call (name->images) ---
+  # Two bounded calls replace the former per-pod `get pod` loop, so one slow pod
+  # can no longer stall the whole stack's gather.
+  KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get pods -n risk-insights --no-headers 2>/dev/null > "$out.pods"
+  KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get pods -n risk-insights -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}' 2>/dev/null > "$out.map"
+
   # --- images (with pod name + status for the dashboard's running indicator) ---
-  KUBECONFIG="$kube" kubectl get pods -n risk-insights --no-headers 2>/dev/null | \
-    grep -E "artifactservice|artifactsync|vpe-manager|callhome" | \
+  grep -E "artifactservice|artifactsync|vpe-manager|callhome" "$out.pods" 2>/dev/null | \
     grep -v "deprovision" | \
     awk '{print $1, $3}' | \
     while read -r p status; do
-      kubectl --kubeconfig "$kube" get pod "$p" -n risk-insights -o jsonpath='{.spec.containers[*].image}' 2>/dev/null | \
+      awk -v p="$p" -F '\t' '$1 == p {print $2}' "$out.map" 2>/dev/null | \
         tr ' ' '\n' | \
         grep -E "risk-insights-(production|release|develop)-docker" | \
         sed 's#.*/##' | \
@@ -42,10 +51,10 @@ for kube in *.yaml; do
     done > "$out.img"
 
   # --- internal packages, per category, newest-first (GNU sort -V inside the pod) ---
-  art_pod=$(KUBECONFIG="$kube" kubectl get pods -n risk-insights 2>/dev/null | awk '$3=="Running" && $1 ~ /^artifactservice-/ {print $1; exit}')
+  art_pod=$(awk '$3 == "Running" && $1 ~ /^artifactservice-/ {print $1; exit}' "$out.pods" 2>/dev/null)
 
   if [ -n "$art_pod" ]; then
-    KUBECONFIG="$kube" kubectl exec -n risk-insights "$art_pod" -- bash -c '
+    KUBECONFIG="$kube" kubectl --request-timeout="$EXEC_TIMEOUT" exec -n risk-insights "$art_pod" -- bash -c '
       entries=(
         "vsp-ais|/opt/ns/downloads/vsp-ais/"
         "vsp-said|/opt/ns/downloads/vsp-said/"
@@ -74,7 +83,7 @@ for kube in *.yaml; do
     cat "$out.img"
     [ -f "$out.pkg" ] && cat "$out.pkg"
   } > "$out"
-  rm -f "$out.img" "$out.pkg"
+  rm -f "$out.img" "$out.pkg" "$out.pods" "$out.map"
 ) &
 done
 wait

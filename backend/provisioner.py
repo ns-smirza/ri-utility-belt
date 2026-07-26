@@ -14,6 +14,7 @@ A "feature" is a named group of one or more flags. Currently:
 Registered by app.py via create_provisioner_bp(cfg); cfg provides
 RANCHER_DIR, RUN_ENV, DISPLAY_NAMES, NPE_RE.
 """
+
 import glob
 import json
 import os
@@ -136,7 +137,8 @@ def create_provisioner_bp(cfg):
         p = run(base + ["get", "namespaces", "--no-headers"])
         if p.returncode != 0:
             raise ProvisionerError(
-                "kubectl get namespaces failed for " + name, (p.stdout or "") + (p.stderr or "")
+                "kubectl get namespaces failed for " + name,
+                (p.stdout or "") + (p.stderr or ""),
             )
         ns = None
         for line in p.stdout.splitlines():
@@ -145,7 +147,9 @@ def create_provisioner_bp(cfg):
                 ns = parts[0]
                 break
         if not ns:
-            raise ProvisionerError("No callhomeservice namespace found in " + name, p.stdout)
+            raise ProvisionerError(
+                "No callhomeservice namespace found in " + name, p.stdout
+            )
 
         p = run(base + ["-n", ns, "get", "pods", "--no-headers"])
         if p.returncode != 0:
@@ -155,13 +159,22 @@ def create_provisioner_bp(cfg):
         pod = None
         for line in p.stdout.splitlines():
             parts = line.split()
-            if len(parts) >= 3 and "callhomeservice-callhome" in parts[0] and parts[2] == "Running":
+            if (
+                len(parts) >= 3
+                and "callhomeservice-callhome" in parts[0]
+                and parts[2] == "Running"
+            ):
                 pod = parts[0]
                 break
         if not pod:
-            raise ProvisionerError("No running callhomeservice-callhome pod in " + ns, p.stdout)
+            raise ProvisionerError(
+                "No running callhomeservice-callhome pod in " + ns, p.stdout
+            )
 
-        p = run(base + ["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.containers[0].name}"])
+        p = run(
+            base
+            + ["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.containers[0].name}"]
+        )
         container = p.stdout.strip() or None
 
         exec_prefix = base + ["-n", ns, "exec", pod]
@@ -229,15 +242,25 @@ def create_provisioner_bp(cfg):
         ok_count = 0
         for f in flags:
             try:
-                payload, raw = _curl(exec_prefix, host, port, tenant, "POST", flag=f, value=value)
+                payload, raw = _curl(
+                    exec_prefix, host, port, tenant, "POST", flag=f, value=value
+                )
                 if payload.get("status") == "success":
                     results.append({"flag": f, "ok": True, "output": raw})
                     ok_count += 1
                 else:
-                    msg = payload.get("message") or payload.get("error") or "provisioner error"
-                    results.append({"flag": f, "ok": False, "error": msg, "output": raw})
+                    msg = (
+                        payload.get("message")
+                        or payload.get("error")
+                        or "provisioner error"
+                    )
+                    results.append(
+                        {"flag": f, "ok": False, "error": msg, "output": raw}
+                    )
             except ProvisionerError as exc:
-                results.append({"flag": f, "ok": False, "error": exc.message, "output": exc.output})
+                results.append(
+                    {"flag": f, "ok": False, "error": exc.message, "output": exc.output}
+                )
 
         verified = None
         verify_error = None
@@ -257,7 +280,11 @@ def create_provisioner_bp(cfg):
             "ok": ok_count == len(flags),
             "value": value,
             "results": results,
-            "summary": {"ok": ok_count, "fail": len(flags) - ok_count, "total": len(flags)},
+            "summary": {
+                "ok": ok_count,
+                "fail": len(flags) - ok_count,
+                "total": len(flags),
+            },
             "verified": verified,
             "verifiedAllMatched": all_match,
             "verifyError": verify_error,
@@ -299,7 +326,10 @@ def create_provisioner_bp(cfg):
             result["feature"] = feature_key or "custom"
             return jsonify(result)
         except ProvisionerError as exc:
-            return jsonify({"ok": False, "error": exc.message, "output": exc.output}), 200
+            return (
+                jsonify({"ok": False, "error": exc.message, "output": exc.output}),
+                200,
+            )
         except subprocess.TimeoutExpired:
             return jsonify({"ok": False, "error": "operation timed out"}), 200
         except Exception as exc:  # noqa: BLE001
@@ -325,11 +355,24 @@ def create_provisioner_bp(cfg):
             result["feature"] = feature_key or "custom"
             return jsonify(result)
         except ProvisionerError as exc:
-            return jsonify(
-                {"ok": False, "action": action, "error": exc.message, "output": exc.output}
-            ), 200
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "action": action,
+                        "error": exc.message,
+                        "output": exc.output,
+                    }
+                ),
+                200,
+            )
         except subprocess.TimeoutExpired:
-            return jsonify({"ok": False, "action": action, "error": "operation timed out"}), 200
+            return (
+                jsonify(
+                    {"ok": False, "action": action, "error": "operation timed out"}
+                ),
+                200,
+            )
         except Exception as exc:  # noqa: BLE001
             return jsonify({"ok": False, "action": action, "error": str(exc)}), 200
 

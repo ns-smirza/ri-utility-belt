@@ -66,7 +66,9 @@ DISPLAY_NAMES = {
     "stork-devint-automation-iad0-nc1.yaml": "DEVINT",
 }
 
-app = Flask(__name__, static_folder=os.path.join(DIST_DIR, "assets"), static_url_path="/assets")
+app = Flask(
+    __name__, static_folder=os.path.join(DIST_DIR, "assets"), static_url_path="/assets"
+)
 
 # Provisioning utility (VPE UI flag) — reuses the constants above
 _cfg = types.SimpleNamespace(
@@ -113,7 +115,9 @@ def _classify_env(name: str) -> str:
 def _rancher_last_refresh() -> Optional[str]:
     """Newest mtime among the rancher kubeconfig files -> ISO UTC, or None."""
     try:
-        mtimes = [os.path.getmtime(p) for p in glob.glob(os.path.join(RANCHER_DIR, "*.yaml"))]
+        mtimes = [
+            os.path.getmtime(p) for p in glob.glob(os.path.join(RANCHER_DIR, "*.yaml"))
+        ]
     except OSError:
         return None
     if not mtimes:
@@ -133,14 +137,17 @@ def _run_script() -> List[Dict[str, Any]]:
     )
     if proc.returncode != 0:
         raise RuntimeError(
-            "script exited {}: stderr={}".format(proc.returncode, proc.stderr.strip()[:500])
+            "script exited {}: stderr={}".format(
+                proc.returncode, proc.stderr.strip()[:500]
+            )
         )
     payload = json.loads(proc.stdout)
     stacks = payload.get("stacks", [])
     for s in stacks:
         s["env"] = _classify_env(s.get("name", ""))
         s["displayName"] = DISPLAY_NAMES.get(
-            s.get("name", ""), os.path.basename(s.get("name", "")).rsplit(".", 1)[0].upper()
+            s.get("name", ""),
+            os.path.basename(s.get("name", "")).rsplit(".", 1)[0].upper(),
         )
         s.setdefault("images", [])
         s.setdefault("packages", {})
@@ -161,7 +168,10 @@ def _do_refresh() -> None:
             _state["stacks"] = stacks
             _state["last_refresh"] = _iso(time.time())
             _state["last_error"] = None
-        print("[rca-dashboard] refresh complete: {} stacks".format(len(stacks)), flush=True)
+        print(
+            "[rca-dashboard] refresh complete: {} stacks".format(len(stacks)),
+            flush=True,
+        )
     except Exception as exc:  # noqa: BLE001 - keep previous data, surface error
         with _lock:
             _state["last_error"] = str(exc)
@@ -240,15 +250,24 @@ def spa_fallback(err):  # noqa: ARG001
 
 def main():
     if not os.path.isdir(DIST_DIR):
-        print("[rca-dashboard] WARNING: dist/ not found at {}".format(DIST_DIR), flush=True)
+        print(
+            "[rca-dashboard] WARNING: dist/ not found at {}".format(DIST_DIR),
+            flush=True,
+        )
     if not os.path.isfile(SCRIPT_PATH):
-        print("[rca-dashboard] WARNING: script not found at {}".format(SCRIPT_PATH), flush=True)
+        print(
+            "[rca-dashboard] WARNING: script not found at {}".format(SCRIPT_PATH),
+            flush=True,
+        )
 
     # initial refresh + scheduler
     _refresh_async()
     threading.Thread(target=_scheduler, daemon=True).start()
 
-    print("[rca-dashboard] serving on 0.0.0.0:{} (dist={})".format(PORT, DIST_DIR), flush=True)
+    print(
+        "[rca-dashboard] serving on 0.0.0.0:{} (dist={})".format(PORT, DIST_DIR),
+        flush=True,
+    )
     app.run(host="0.0.0.0", port=PORT, threaded=True)
 
 

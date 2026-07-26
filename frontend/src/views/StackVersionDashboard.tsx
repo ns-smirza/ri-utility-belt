@@ -127,9 +127,11 @@ export function StackVersionDashboard() {
       return matchesSearch(s, query)
     })
     .sort((a, b) => {
-      // On the All tab, show prod stacks first and NPE last (stable within group).
-      const order = (e: Env) => (e === 'npe' ? 1 : 0)
-      return order(a.env) - order(b.env)
+      // On the All tab: NPE first in a fixed order (STG01, QA01, DEVINT), then prod
+      // in data order. Stable sort preserves relative order within equal keys.
+      const NPE_ORDER: Record<string, number> = { STG01: 0, QA01: 1, DEVINT: 2 }
+      const key = (s: Stack) => (s.env === 'npe' ? NPE_ORDER[s.displayName ?? ''] ?? 50 : 1000)
+      return key(a) - key(b)
     })
 
   const totalInTab = (data?.stacks ?? []).filter(
