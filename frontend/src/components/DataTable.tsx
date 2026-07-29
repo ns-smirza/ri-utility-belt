@@ -22,7 +22,7 @@ interface Column {
 const COLUMNS: Column[] = [
   { key: 'stack', label: 'Stack', kind: 'stack' },
   { key: 'env', label: 'Env', kind: 'env' },
-  { key: 'vpe-sf', label: 'Software', kind: 'pkg' },
+  { key: 'vpe-sf', label: 'Platform', kind: 'pkg' },
   { key: 'kvm', label: 'KVM', kind: 'pkg' },
   { key: 'ova', label: 'OVA', kind: 'pkg' },
   { key: 'vsp-swg', label: 'SWG', kind: 'pkg' },
@@ -116,20 +116,17 @@ function ImagesCell({ images, query }: { images: ImageInfo[]; query: string }) {
   }
   return (
     <div className="multi-cell">
-      {images.map((im, i) => {
-        const tip = im.pods.map((p) => `${p.name}: ${p.status}`).join('\n')
-        return (
-          <div key={i} className="cell-line pod-line">
-            <span className="pod-dot-wrap" data-testid={`pod-dot-${i}`}>
-              <span className={`pod-dot ${im.running ? 'pod-on' : 'pod-off'}`} />
-              <span className="pod-tip" role="tooltip">
-                {tip}
-              </span>
+      {images.map((im, i) => (
+        <div key={i} className="cell-line pod-line">
+          <span className="pod-dot-wrap" data-testid={`pod-dot-${i}`}>
+            <span className={`pod-dot ${im.running ? 'pod-on' : 'pod-off'}`} />
+            <span className="pod-tip" role="tooltip">
+              {im.status}
             </span>
-            {highlight(im.image, query)}
-          </div>
-        )
-      })}
+          </span>
+          {highlight(im.image, query)}
+        </div>
+      ))}
     </div>
   )
 }

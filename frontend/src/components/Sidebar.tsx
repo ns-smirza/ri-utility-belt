@@ -16,8 +16,8 @@ export function Sidebar({ views, active, onChange }: Props) {
       <div className="sidebar-brand" data-testid="app-title">
         <span className="brand-icon" aria-hidden="true">🛠️</span>
         <div className="brand-text">
-          <div className="brand-title">Risk Insights</div>
-          <div className="brand-subtitle">Utility Belt</div>
+          <div className="brand-title">Virtual Private Edge</div>
+          <div className="brand-subtitle">VPE - Utility Belt</div>
         </div>
       </div>
 

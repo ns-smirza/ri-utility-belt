@@ -11,6 +11,23 @@ export async function triggerRefresh(): Promise<void> {
   if (!res.ok) throw new Error(`/api/refresh failed: ${res.status}`)
 }
 
+export interface RestartResult {
+  ok: boolean
+  error?: string
+  output?: string
+  message?: string
+  deployment?: string
+}
+
+export async function restartDeployment(stack: string, pod: string): Promise<RestartResult> {
+  const res = await fetch('/api/restart-deployment', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ stack, pod }),
+  })
+  return res.json()
+}
+
 export interface StackInfo {
   name: string
   displayName: string
@@ -147,6 +164,92 @@ export async function provSet(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ stack, tenant, value, flags }),
+  })
+  return res.json()
+}
+
+export type DiagMark = 'tick' | 'cross' | 'warn' | 'na'
+
+export interface DiagCheckRow {
+  stage: string
+  cid: string
+  label: string
+  mark: DiagMark
+  reason: string
+  firstFail: boolean
+  blocked: boolean
+  ignorable: boolean
+  what: string
+  sources: string[]
+  commands: string[]
+}
+
+export interface DiagIdentity {
+  serial: string
+  tenantUrl: string
+  tenantId: string
+  restToken: string
+  identifier: string
+}
+
+export interface DiagCounts {
+  total: number
+  ticks: number
+  crosses: number
+  warns: number
+  na: number
+}
+
+export interface DiagConfirmation {
+  label: string
+  ok: boolean
+}
+
+export interface DiagReport {
+  ip: string
+  hostname: string
+  build: string
+  captured: string
+  ageMin: number | null
+  scenario: string
+  scenarioName: string
+  confidence: string
+  reason: string
+  status: string
+  summaryMessage: string
+  likelyCause: string
+  firstFailStage: string | null
+  identity: DiagIdentity
+  counts: DiagCounts
+  staleFiltered: number
+  cycleAnchor: string | null
+  checks: DiagCheckRow[]
+  ignorableChecks: DiagCheckRow[]
+  confirmation: DiagConfirmation[]
+  tetheringStatus: Record<string, unknown>
+  reachabilityStatus: Record<string, unknown>
+  durationSec?: number
+}
+
+export interface VpeDiagResult {
+  ok: boolean
+  report?: DiagReport
+  stderr?: string
+  error?: string
+  output?: string
+  returncode?: number
+  durationSec?: number
+}
+
+export async function runVpeDiag(
+  ip: string,
+  user?: string,
+  password?: string,
+): Promise<VpeDiagResult> {
+  const res = await fetch('/api/vpe-diag/run', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ip, user, password }),
   })
   return res.json()
 }

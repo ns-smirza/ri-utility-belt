@@ -2,7 +2,7 @@ set +m
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
-# --- args: --prod (everything except qa01/stg01/devint), --npe (only qa01/stg01/devint),
+# --- args: --prod (everything except npe), --npe (only npe stacks),
 #     --json (emit JSON instead of the text matrix; orthogonal to --prod/--npe), none = all ---
 mode=""
 json=0
@@ -15,7 +15,7 @@ for arg in "$@"; do
   esac
 done
 
-is_npe() { case "$1" in *qa01*|*stg01*|*devint*) return 0;; *) return 1;; esac }
+is_npe() { case "$1" in *qa01*|*stg01*|*devint*|*npe02*|*fed1mp*|*perf01*) return 0;; *) return 1;; esac }
 
 # Per-call kubectl request timeouts so one slow/unreachable cluster can't stall the gather.
 GET_TIMEOUT=${GET_TIMEOUT:-15}
@@ -37,7 +37,7 @@ for kube in *.yaml; do
   KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get pods -n risk-insights -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}' 2>/dev/null > "$out.map"
 
   # --- images (with pod name + status for the dashboard's running indicator) ---
-  grep -E "artifactservice|artifactsync|vpe-manager|callhome" "$out.pods" 2>/dev/null | \
+  grep -E "artifactservice|artifactsync|vpe-manager|callhome|alarmmanager|cloudmetricsgenerator" "$out.pods" 2>/dev/null | \
     grep -v "deprovision" | \
     awk '{print $1, $3}' | \
     while read -r p status; do
