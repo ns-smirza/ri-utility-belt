@@ -732,6 +732,17 @@ def classify(d, ctx):
         or bool(logs.get("heartbeat_sync", {}).get("server_requested_reset"))
     )
     attempted = has_token or has_cert or (cdpub.strip() and not configdist_placeholder)
+    # A save can fail BEFORE persisting registration_token.json / client.pem /
+    # rewriting configdist-core-pub (e.g. cert enrollment rejected at TCS), so
+    # the artifact-based `attempted` is False even though the box is genuinely
+    # failing (not fresh). The nsclib enrollment log is the reliable signal in
+    # that case. Don't count it when there's reset evidence — a deprovisioned
+    # box with stale enroll lines from a prior tether is handled by the S3
+    # branch, not this one.
+    _nclib = logs.get("nsclib") or {}
+    enroll_log_attempt = (
+        bool(_nclib.get("enroll_start")) or bool(_nclib.get("enroll_failed"))
+    ) and not (reset_requested or reset_log or has_reset_markers)
 
     # 1) TETHERED — all four critical fields true.
     if serial and cfgagent_connected and callhome_reachable and serial_files_match:
@@ -766,26 +777,35 @@ def classify(d, ctx):
             )
             return scen, reason, "high"
         # FAILING/IN-PROGRESS: an enrollment was attempted (token/cert present, or real configdist
-        # fqdn) but tethering hasn't completed and there's NO reset evidence (so not a deprovision).
-        if attempted and not (reset_requested or reset_log or has_reset_markers):
+        # fqdn, or nsclib enrollment log shows a start/failure) but tethering hasn't completed and
+        # there's NO reset evidence (so not a deprovision).
+        if (attempted or enroll_log_attempt) and not (
+            reset_requested or reset_log or has_reset_markers
+        ):
             age = ctx.get("age_min")
+            via_log = (not attempted) and enroll_log_attempt
+            attempt_desc = (
+                "nsclib enrollment log shows an attempt"
+                if via_log
+                else ("token=%s cert=%s" % (has_token, has_cert))
+            )
             if age is not None and age < TETHER_GRACE_MIN:
                 tag = "IN-PROGRESS"
                 reason = (
-                    "enrollment attempted (token=%s cert=%s) but not all phases complete; age %d min (<%d-min grace)"
-                    % (has_token, has_cert, age, TETHER_GRACE_MIN)
+                    "enrollment attempted (%s) but not all phases complete; age %d min (<%d-min grace)"
+                    % (attempt_desc, age, TETHER_GRACE_MIN)
                 )
             elif age is not None:
                 tag = "FAILING"
                 reason = (
-                    "enrollment attempted (token=%s cert=%s) but tethering incomplete after %d min (>= %d-min expectation)"
-                    % (has_token, has_cert, age, TETHER_GRACE_MIN)
+                    "enrollment attempted (%s) but tethering incomplete after %d min (>= %d-min expectation)"
+                    % (attempt_desc, age, TETHER_GRACE_MIN)
                 )
             else:
                 tag = "FAILING"
                 reason = (
-                    "enrollment attempted (token=%s cert=%s) but tethering incomplete; age unknown"
-                    % (has_token, has_cert)
+                    "enrollment attempted (%s) but tethering incomplete; age unknown"
+                    % attempt_desc
                 )
             return tag, reason, "medium"
         # S1: fresh — nothing attempted, placeholder configdist endpoint, no token/cert.
@@ -2211,6 +2231,18 @@ def likely_cause_hint(stage, d, ctx):
         last_fail = _last(fails) if fails else ""
         # CSR-subject-specific (the ENG-1007978 Country/State/Locality defect) —
         # typically surfaces as HTTP 500 "failed to sign CSR"/"Subject missing Country".
+        if (
+            "Registration endpoint not found" in last_fail
+            or "token may be for a different environment" in last_fail
+        ):
+            return (
+                "certificate enrollment failed — 'Registration endpoint not found': the registration "
+                "token's environment/endpoint doesn't match this appliance's configured registration "
+                "endpoint. Known cause: the token was generated for a DIFFERENT environment (e.g. a "
+                "prod token applied to an NPE box, or vice-versa), or the appliance's registration "
+                "endpoint config is wrong. Generate a FRESH registration token from the correct "
+                "environment/tenant and re-apply it (`set system registrationkey <jwt>` then `save`)."
+            )
         if "failed to sign CSR" in last_fail or "Subject missing Country" in last_fail:
             return (
                 "certificate enrollment failed at TCS (failed to sign CSR / Subject missing Country). "
