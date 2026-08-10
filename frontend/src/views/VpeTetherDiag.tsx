@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { runVpeDiag, type DiagCheckRow, type DiagMark, type VpeDiagResult } from '../api'
 
 /** Copy text with an execCommand fallback for non-secure (HTTP) contexts. */
@@ -85,6 +85,20 @@ function formatAge(min: number | null): string {
   const m = min % 60
   if (h >= 1) return `${h}hr ${m}min ago`
   return `${m}min ago`
+}
+
+/** Render text with bare URLs as clickable links (opens in a new tab). */
+function linkify(text: string): ReactNode {
+  const parts = text.split(/(https?:\/\/[^\s]+)/)
+  return parts.map((p, i) =>
+    /^https?:\/\//.test(p) ? (
+      <a key={i} href={p} target="_blank" rel="noopener noreferrer">
+        {p}
+      </a>
+    ) : (
+      <Fragment key={i}>{p}</Fragment>
+    ),
+  )
 }
 
 /** Group ordered checks by stage preserving the script's chronological order. */
@@ -323,7 +337,7 @@ ${Object.keys(result.report.reachabilityStatus || {}).length > 0 ? `\nreachabili
                 {report.likelyCause && (
                   <div className="diag-cause" data-testid="vpe-diag-cause">
                     <span className="diag-cause-label">Likely cause</span>
-                    {report.likelyCause}
+                    {linkify(report.likelyCause)}
                   </div>
                 )}
               </div>

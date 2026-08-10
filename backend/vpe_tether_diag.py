@@ -2253,12 +2253,17 @@ def likely_cause_hint(stage, d, ctx):
             or "token may be for a different environment" in last_fail
         ):
             return (
-                "certificate enrollment failed — 'Registration endpoint not found': the registration "
-                "token's environment/endpoint doesn't match this appliance's configured registration "
-                "endpoint. Known cause: the token was generated for a DIFFERENT environment (e.g. a "
-                "prod token applied to an NPE box, or vice-versa), or the appliance's registration "
-                "endpoint config is wrong. Generate a FRESH registration token from the correct "
-                "environment/tenant and re-apply it (`set system registrationkey <jwt>` then `save`)."
+                "certificate enrollment failed — 'Registration endpoint not found': the appliance could "
+                "not resolve/reach the registration endpoint for this tenant. MOST COMMON cause: the "
+                "DNS/CNAME migration was NOT done for this newly brought-up tenant (the callhome/"
+                "registration CNAME for the tenant fqdn hasn't been created in DNS), so the VPE cannot "
+                "resolve the registration endpoint at enroll time. Run the callhome-cname-migration "
+                "skill to create/migrate the CNAME: "
+                "https://github.com/netSkope/ri-callhome/blob/develop/.claude/skills/callhome-cname-migration/SKILL.md "
+                "— then re-apply the registration key (`set system registrationkey <jwt>` then `save`). "
+                "Less common: the token was generated for a different environment (e.g. a prod token on "
+                "an NPE box) — check the registration-token JWT fqdn in the 'registration token' card "
+                "matches the environment this VPE is intended for."
             )
         if "failed to sign CSR" in last_fail or "Subject missing Country" in last_fail:
             return (

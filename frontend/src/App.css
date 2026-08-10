@@ -1314,6 +1314,14 @@
   line-height: 1.55;
   color: #5a4b00;
 }
+.diag-cause a {
+  color: #2b6cb0;
+  word-break: break-all;
+  text-decoration: underline;
+}
+.diag-cause a:hover {
+  text-decoration: none;
+}
 .diag-cause-label {
   display: inline-block;
   font-weight: 800;
