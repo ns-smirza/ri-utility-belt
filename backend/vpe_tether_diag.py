@@ -1075,16 +1075,33 @@ def chk_0e_enroll_seq(d, ctx):
     # 2) No current success + a failure line -> the save/enrollment FAILED.
     #    Surface the real error so the user sees e.g. "HTTP 500: failed to sign CSR".
     if fail_lines:
-        # Prefer a timestamped (current-cycle) failure line; fall back to the last
-        # captured (may be a display line without its own timestamp).
-        ts_fails = [ln for ln in fail_lines if parse_line_ts(ln) is not None]
-        msg = _last(ts_fails) if ts_fails else _last(fail_lines)
-        # Extract the human-readable failure text from the line (strip nsclib log prefix).
-        m = re.search(
-            r"(Certificate enrollment failed.*|Certificate request failed.*|Subject missing Country.*|failed to sign CSR.*|enrollment failed.*|HTTP [45]\d\d.*)",
-            msg,
-        )
-        human = m.group(1)[:200] if m else msg[:200]
+        # Surface the ACTUAL cause. The richest text lives in the nscli display
+        # block [clib.py:372] Sending:{... "err": "Certificate enrollment failed:
+        # <cause>"} — that line has no timestamp, so a timestamp-preference would
+        # skip it and surface the bare `commitplugin.py:326] Certificate
+        # enrollment failed` ERROR line instead. Prefer detail-carrying lines.
+        details = []
+        for ln in fail_lines:
+            md = re.search(r"Certificate enrollment failed:\s*(.+)", ln)
+            if md and md.group(1).strip():
+                details.append(md.group(1).strip())
+        if details:
+            best = max(set(details), key=len)
+            # the "err" value repeats the message separated by escaped \n; take
+            # the first clause and decode \uXXXX escapes for readable display.
+            human = re.split(r"\\n|\n", best)[0].strip()
+            human = re.sub(
+                r"\\u([0-9a-fA-F]{4})", lambda mm: chr(int(mm.group(1), 16)), human
+            )
+            human = human[:200]
+        else:
+            ts_fails = [ln for ln in fail_lines if parse_line_ts(ln) is not None]
+            msg = _last(ts_fails) if ts_fails else _last(fail_lines)
+            m = re.search(
+                r"(Certificate enrollment failed.*|Certificate request failed.*|Subject missing Country.*|failed to sign CSR.*|enrollment failed.*|HTTP [45]\d\d.*)",
+                msg,
+            )
+            human = m.group(1)[:200] if m else msg[:200]
         return CROSS, "current-cycle enrollment FAILED: %s" % human
     # 3) No success, no explicit failure -> enrollment didn't complete / didn't run.
     miss = []
