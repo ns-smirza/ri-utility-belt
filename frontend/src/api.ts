@@ -205,6 +205,32 @@ export interface DiagConfirmation {
   ok: boolean
 }
 
+export interface DiagTokenFile {
+  present: boolean
+  tenantId?: number | string | null
+  deviceId?: string | null
+  fqdn?: string | null
+  licenseKey?: boolean
+  expiredAt?: number | null
+  expiredAtDate?: string | null
+  createdAt?: number | null
+  createdAtDate?: string | null
+}
+
+export interface DiagRegToken {
+  jwtPresent: boolean
+  payload: Record<string, unknown>
+  did: string
+  tid: string | number | null
+  fqdn: string
+  exp: number | null
+  iat: number | null
+  expDate: string | null
+  iatDate: string | null
+  expired: boolean | null
+  tokenFile: DiagTokenFile
+}
+
 export interface DiagReport {
   ip: string
   hostname: string
@@ -228,6 +254,7 @@ export interface DiagReport {
   confirmation: DiagConfirmation[]
   tetheringStatus: Record<string, unknown>
   reachabilityStatus: Record<string, unknown>
+  registrationToken: DiagRegToken
   durationSec?: number
 }
 

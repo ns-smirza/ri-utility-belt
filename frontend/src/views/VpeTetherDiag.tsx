@@ -454,6 +454,69 @@ ${JSON.stringify(report.tetheringStatus, null, 2)}`}
             )}
           </div>
         )}
+
+        {!busy && report && (
+          <div className="prov-result-card diag-regtoken-card" data-testid="vpe-diag-regtoken-card">
+            <div className="diag-status-head">
+              <h2 className="prov-result-title">
+                <code>registration token</code>
+              </h2>
+              <span className="diag-status-sub">
+                JWT applied via <code>set system registrationkey</code> — decoded (no signature verification)
+              </span>
+            </div>
+
+            {report.registrationToken.jwtPresent ? (
+              <>
+                <div className="diag-regtoken-fields" data-testid="vpe-diag-regtoken-fields">
+                  <Chip label="Device ID" value={String(report.registrationToken.did || '—')} />
+                  <Chip label="Tenant ID" value={String(report.registrationToken.tid ?? '—')} />
+                  <Chip label="FQDN / env" value={report.registrationToken.fqdn || '—'} />
+                  <Chip label="Issued" value={report.registrationToken.iatDate || '—'} />
+                  <span
+                    className={`diag-regtoken-expiry ${report.registrationToken.expired ? 'exp-expired' : 'exp-valid'}`}
+                    data-testid="vpe-diag-regtoken-expiry"
+                  >
+                    <span className="diag-chip-label">Expires</span>
+                    <code>{report.registrationToken.expDate || '—'}</code>
+                    <span className="diag-expiry-tag">
+                      {report.registrationToken.expired == null
+                        ? '?'
+                        : report.registrationToken.expired
+                          ? 'EXPIRED'
+                          : 'valid'}
+                    </span>
+                  </span>
+                </div>
+                <h3 className="diag-status-subhead">
+                  <code>decoded payload</code>
+                </h3>
+                <pre className="diag-status-pre" data-testid="vpe-diag-regtoken-payload">
+{JSON.stringify(report.registrationToken.payload, null, 2)}
+                </pre>
+              </>
+            ) : (
+              <p className="prov-loading">
+                No registrationkey JWT found in config.json — no registration key has been applied (or
+                config.json is unreadable).
+              </p>
+            )}
+
+            <h3 className="diag-status-subhead">
+              <code>registration_token.json (on-box)</code>
+            </h3>
+            {report.registrationToken.tokenFile.present ? (
+              <pre className="diag-status-pre" data-testid="vpe-diag-regtoken-file">
+{JSON.stringify(report.registrationToken.tokenFile, null, 2)}
+              </pre>
+            ) : (
+              <p className="prov-loading">
+                registration_token.json not on disk — enrollment did not persist it (expected on a
+                fresh box or when enrollment failed before the save completed).
+              </p>
+            )}
+          </div>
+        )}
         </>
       )}
     </div>

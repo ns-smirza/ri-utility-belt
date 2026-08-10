@@ -1657,6 +1657,54 @@
   overflow-x: auto;
 }
 
+/* Registration token (JWT decode) card */
+.diag-regtoken-card {
+  margin-top: 18px;
+}
+.diag-regtoken-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.diag-regtoken-expiry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4f6fa;
+  border: 1px solid #e3e7ef;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+.diag-regtoken-expiry code {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+.diag-expiry-tag {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.diag-regtoken-expiry.exp-valid {
+  background: #eef9f2;
+  border-color: #c5e8d3;
+}
+.diag-regtoken-expiry.exp-valid .diag-expiry-tag {
+  background: #167a3d;
+  color: #fff;
+}
+.diag-regtoken-expiry.exp-expired {
+  background: #fdeef1;
+  border-color: #f3cdd4;
+}
+.diag-regtoken-expiry.exp-expired .diag-expiry-tag {
+  background: #b3273c;
+  color: #fff;
+}
+
 /* Click-to-expand rows */
 .diag-row-clickable {
   cursor: pointer;

@@ -2550,6 +2550,70 @@ def build_json_report(
         name = SCENARIO_NAMES.get(code, code)
         return re.sub(r"^S\d+\s*[—-]\s*", "", name)
 
+    def _dtstr(e):
+        if e is None:
+            return None
+        try:
+            return _dt.datetime.utcfromtimestamp(int(e)).strftime("%Y-%m-%d %H:%M UTC")
+        except Exception:
+            return None
+
+    def _reg_token():
+        # The registration key applied via `set system registrationkey` is stored
+        # as a JWT in config.json.system.registrationkey. Decode (no sig verify)
+        # for did/tid/fqdn/exp/iat. Also surface the on-box
+        # /opt/ns/cfg/registration_token.json (written on successful enrollment).
+        cfg = d.get("cfg") or {}
+        cj = cfg.get("config_json") or {}
+        rk = (cj.get("system") or {}).get("registrationkey") or ""
+        payload = jwt_decode(rk) if rk else {}
+        meta = payload.get("metadata")
+        meta_fqdn = None
+        if isinstance(meta, str):
+            try:
+                meta_fqdn = (json.loads(meta) or {}).get("fqdn")
+            except Exception:
+                pass
+        elif isinstance(meta, dict):
+            meta_fqdn = meta.get("fqdn")
+        exp = payload.get("exp")
+        iat = payload.get("iat")
+        expired = None
+        if exp is not None:
+            try:
+                expired = (
+                    _dt.datetime.utcfromtimestamp(int(exp)) < _dt.datetime.utcnow()
+                )
+            except Exception:
+                expired = None
+        rt = cfg.get("registration_token") or {}
+        token_file = {"present": False}
+        if rt:
+            token_file = {
+                "present": True,
+                "tenantId": rt.get("tenant_id"),
+                "deviceId": rt.get("device_id"),
+                "fqdn": rt.get("fqdn"),
+                "licenseKey": bool(rt.get("license_key")),
+                "expiredAt": rt.get("expired_at"),
+                "expiredAtDate": _dtstr(rt.get("expired_at")),
+                "createdAt": rt.get("created_at"),
+                "createdAtDate": _dtstr(rt.get("created_at")),
+            }
+        return {
+            "jwtPresent": bool(rk),
+            "payload": payload,
+            "did": payload.get("did") or "",
+            "tid": payload.get("tid") if payload.get("tid") is not None else "",
+            "fqdn": meta_fqdn or ctx.get("fqdn") or "",
+            "exp": exp,
+            "iat": iat,
+            "expDate": _dtstr(exp),
+            "iatDate": _dtstr(iat),
+            "expired": expired,
+            "tokenFile": token_file,
+        }
+
     ts = (d.get("status") or {}).get("tethering_status") or {}
     all_results = results + ignorable_results
     ticks = sum(1 for r in all_results if r[3] == TICK)
@@ -2706,6 +2770,7 @@ def build_json_report(
         # raw-status view. Read-only; no transformation.
         "tetheringStatus": ts,
         "reachabilityStatus": (d.get("status") or {}).get("reachability_status") or {},
+        "registrationToken": _reg_token(),
     }
     return report
 
