@@ -531,6 +531,20 @@ ${JSON.stringify(report.tetheringStatus, null, 2)}`}
             )}
           </div>
         )}
+
+        {!busy && report && (
+          <div className="prov-result-card diag-podsall-card" data-testid="vpe-diag-podsall-card">
+            <div className="diag-status-head">
+              <h2 className="prov-result-title">
+                <code>kubectl get pods -A</code>
+              </h2>
+              <span className="diag-status-sub">all namespaces, verbatim on-box output</span>
+            </div>
+            <pre className="diag-status-pre diag-podsall-pre" data-testid="vpe-diag-podsall">
+{report.podsAll || '(no output — pods -A returned nothing or SSH failed)'}
+            </pre>
+          </div>
+        )}
         </>
       )}
     </div>

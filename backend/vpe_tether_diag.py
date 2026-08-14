@@ -927,7 +927,11 @@ def chk_pre_pods(d, ctx):
 
     running = all(any_running(p) for p in required)
     vault = "vault-agent-injector" in pods
-    ok = bool(ts.get("required_pods_running")) and running
+    # The pass/fail gate is: at least one Running replica of each required
+    # pod. status.json's `required_pods_running` can lag or disagree with
+    # the real pod list (the fresh-box trap), so it is informational only —
+    # NOT part of the gate. A box with a Running replica should not cross
+    # here solely because `required_pods_running=false`.
 
     # Surface every non-Running replica of a required pod (Error,
     # CrashLoopBackOff, …) — e.g. a cfgagent stuck in Error with many
@@ -940,7 +944,7 @@ def chk_pre_pods(d, ctx):
                 failed.append("%s (%s)" % (name, st))
     no_running = [p for p in required if not any_running(p)]
 
-    if ok and failed:
+    if running and failed:
         # A running replica satisfies the tethering gate, but a failed/Error
         # replica is also present -> WARN (recent restart/recovery?).
         return (
@@ -953,24 +957,19 @@ def chk_pre_pods(d, ctx):
                 vault,
             ),
         )
-    if ok:
+    if running:
         return (
             TICK,
             "required_pods_running=%s; cfgagent+callhome Running=%s; vault=%s"
             % (ts.get("required_pods_running"), running, vault),
         )
-    # not ok — cross. Name the missing/failed replicas explicitly.
-    parts = []
-    if not ts.get("required_pods_running"):
-        parts.append("required_pods_running=False")
-    if no_running:
-        parts.append("no Running replica for: %s" % ", ".join(no_running))
+    # No Running replica for a required pod -> cross. Name the missing and
+    # any failed/Error replicas explicitly.
+    parts = ["no Running replica for: %s" % ", ".join(no_running)]
     if failed:
         parts.append("failed/Error replica(s): %s" % ", ".join(failed))
-    return CROSS, "%s; vault=%s" % (
-        "; ".join(parts) if parts else "required pods not Running",
-        vault,
-    )
+    parts.append("required_pods_running=%s" % ts.get("required_pods_running"))
+    return CROSS, "%s; vault=%s" % ("; ".join(parts), vault)
 
 
 # ---- STAGE 0: registration key + cert enrollment ----
@@ -2849,6 +2848,10 @@ def build_json_report(
         "tetheringStatus": ts,
         "reachabilityStatus": (d.get("status") or {}).get("reachability_status") or {},
         "registrationToken": _reg_token(),
+        # Raw `kubectl get pods -A` output (all namespaces), for the UI's
+        # pods-overview card. The collector stores this as a TOP-LEVEL key
+        # (out["pods_all"]), not nested under out["pods"]. Verbatim text.
+        "podsAll": d.get("pods_all") or "",
     }
     return report
 

@@ -1669,6 +1669,12 @@
 .diag-regtoken-card {
   margin-top: 18px;
 }
+.diag-podsall-card {
+  margin-top: 18px;
+}
+.diag-podsall-pre {
+  max-height: 60vh;
+}
 .diag-regtoken-fields {
   display: flex;
   flex-wrap: wrap;

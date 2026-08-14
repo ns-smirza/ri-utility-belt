@@ -255,6 +255,7 @@ export interface DiagReport {
   tetheringStatus: Record<string, unknown>
   reachabilityStatus: Record<string, unknown>
   registrationToken: DiagRegToken
+  podsAll: string
   durationSec?: number
 }
 
