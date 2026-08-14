@@ -159,11 +159,14 @@ KC = "sudo -n kubectl --kubeconfig /etc/rancher/k3s/k3s.yaml"
 
 out = {}
 
-# ---- build identity -------------------------------------------------------
+# ---- build identity + current wall-clock time (UTC) ------------------------
 out["build"] = {
     "version": (read_file("/opt/ns/cfg/nscli_config.version") or "").strip(),
     "platform_code": (read_file("/opt/ns/cfg/platform_code") or "").strip(),
     "hostname": (read_file("/etc/hostname") or "").strip() or "ns-vpe",
+    # VPE's own current datetime — captured so the UI can show the box's
+    # wall-clock time alongside the timeline (the appliance time is in `captured`).
+    "vpe_time": (run("date -u 2>/dev/null") or "").strip(),
 }
 
 # ---- primary status source: /opt/ns/appliance/status.json -----------------
@@ -760,6 +763,59 @@ def classify(d, ctx):
 
     # 2) UNTETHERED — no serial and callhome not reachable.
     if not serial and not callhome_reachable:
+        # Re-tether in progress: a registration key was applied AFTER the latest reset
+        # (an enroll_start line timestamps later than the last reset_retain / recon
+        # reset_last_attempt_ts). This is a registration attempt in progress (or failed
+        # past the grace window), NOT a deprovisioned state — even though stale artifacts
+        # (real configdist, token, cert) and reset evidence are present. The current
+        # enroll_start after the reset is the deciding signal.
+        latest_reset_ts = 0
+        for ln in (logs.get("nsclib") or {}).get("reset_retain", []) or []:
+            e = _ts_epoch(parse_line_ts(ln))
+            if e is not None and e > latest_reset_ts:
+                latest_reset_ts = e
+        recon = cfg.get("recon_status") or {}
+        if recon.get("reset_last_attempt_ts"):
+            latest_reset_ts = max(latest_reset_ts, int(recon["reset_last_attempt_ts"]))
+        post_reset_start_e = None
+        for ln in (logs.get("nsclib") or {}).get("enroll_start", []) or []:
+            e = _ts_epoch(parse_line_ts(ln))
+            if e is not None and e > latest_reset_ts:
+                if post_reset_start_e is None or e < post_reset_start_e:
+                    post_reset_start_e = e
+        if post_reset_start_e is not None:
+            age_min = int(
+                (
+                    _dt.datetime.utcnow()
+                    - _dt.datetime.utcfromtimestamp(post_reset_start_e)
+                ).total_seconds()
+                / 60
+            )
+            if age_min is not None and age_min < TETHER_GRACE_MIN:
+                tag = "IN-PROGRESS"
+                reason = (
+                    "re-tether in progress: a registration key was applied after the last reset (enroll_start at %s, age %d min < %d-min grace) but enrollment not yet complete"
+                    % (
+                        _dt.datetime.utcfromtimestamp(post_reset_start_e).strftime(
+                            "%Y-%m-%d %H:%M UTC"
+                        ),
+                        age_min,
+                        TETHER_GRACE_MIN,
+                    )
+                )
+            else:
+                tag = "FAILING"
+                reason = (
+                    "re-tether FAILING: a registration key was applied after the last reset (enroll_start at %s) but enrollment did not complete (age %s min >= %d-min expectation)"
+                    % (
+                        _dt.datetime.utcfromtimestamp(post_reset_start_e).strftime(
+                            "%Y-%m-%d %H:%M UTC"
+                        ),
+                        age_min if age_min is not None else "?",
+                        TETHER_GRACE_MIN,
+                    )
+                )
+            return tag, reason, "medium"
         # S3: deprovisioned/stale — cfgagent reconnected to a PERSISTED real configdist fqdn,
         # stale token/cert present, AND there is reset evidence (deprovision ran).
         if (
@@ -2519,14 +2575,15 @@ def build_timeline(d, ctx):
                 }
             )
             continue
-        # no outcome recorded
+        # no outcome recorded — a `set system registrationkey` + `save` was triggered on
+        # the box (enrollment began) but no cert received / no failure recorded yet.
         events.append(
             {
-                "event": "enrollment_started",
+                "event": "registration_key_applied",
                 "ts": _ts_epoch(t),
                 "tsDate": dt_str(t),
                 "did": did,
-                "detail": "Enrollment started (no cert received / no failure recorded yet)",
+                "detail": "Registration key applied (enrollment started, no cert received / no failure recorded yet)",
             }
         )
 
@@ -3021,6 +3078,7 @@ def build_json_report(
         "ip": ip,
         "hostname": ctx.get("hostname") or "ns-vpe",
         "build": ctx.get("build") or "",
+        "vpeTime": ((d.get("build") or {}).get("vpe_time") or "").strip() or None,
         "captured": _dt.datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC"),
         "ageMin": age,
         "scenario": scen,

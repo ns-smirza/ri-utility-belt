@@ -302,6 +302,7 @@ ${Object.keys(result.report.reachabilityStatus || {}).length > 0 ? `\nreachabili
                   </div>
                   <div className="diag-subline">
                     <span>Captured {report.captured}</span>
+                    {report.vpeTime && <span>VPE time {report.vpeTime}</span>}
                     {report.ageMin != null && <span>enrolled {formatAge(report.ageMin)}</span>}
                     {report.durationSec != null && <span>{report.durationSec}s</span>}
                   </div>

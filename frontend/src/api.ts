@@ -247,6 +247,7 @@ export interface DiagReport {
   hostname: string
   build: string
   captured: string
+  vpeTime: string | null
   ageMin: number | null
   scenario: string
   scenarioName: string

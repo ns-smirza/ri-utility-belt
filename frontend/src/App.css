@@ -1717,6 +1717,7 @@
 .diag-tl-item.diag-tl-deprovisioned .diag-tl-dot { background: #8a6500; }
 .diag-tl-item.diag-tl-enrollment_failed .diag-tl-dot { background: #b3273c; }
 .diag-tl-item.diag-tl-enrollment_started .diag-tl-dot { background: #2b6cb0; }
+.diag-tl-item.diag-tl-registration_key_applied .diag-tl-dot { background: #2b6cb0; }
 .diag-tl-date {
   display: inline-block;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
