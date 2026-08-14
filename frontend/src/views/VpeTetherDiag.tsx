@@ -566,6 +566,23 @@ ${JSON.stringify(report.tetheringStatus, null, 2)}`}
             </ol>
           </div>
         )}
+
+        {!busy && report && report.cfgagentSession && (report.cfgagentSession.swversion || report.cfgagentSession.roles) && (
+          <div className="prov-result-card diag-cfgagent-card" data-testid="vpe-diag-cfgagent-card">
+            <div className="diag-status-head">
+              <h2 className="prov-result-title">cfgagent session</h2>
+              <span className="diag-status-sub">from the cfgagent reconnect URL (stage 1)</span>
+            </div>
+            <div className="diag-regtoken-fields">
+              <Chip label="swversion" value={report.cfgagentSession.swversion || '—'} />
+              <Chip label="protocol" value={report.cfgagentSession.protocolVersion || '—'} />
+              <Chip label="roles" value={report.cfgagentSession.roles || '—'} />
+              <Chip label="friendly name" value={report.cfgagentSession.friendlyName || '—'} />
+              <Chip label="nonce" value={report.cfgagentSession.nonce || '—'} />
+              <Chip label="reconnect ts" value={report.cfgagentSession.timestamp || '—'} />
+            </div>
+          </div>
+        )}
         </>
       )}
     </div>

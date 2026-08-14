@@ -216,6 +216,17 @@ export interface DiagTimelineEvent {
   detail?: string
 }
 
+export interface DiagCfgagentSession {
+  swversion: string
+  protocolVersion: string
+  roles: string
+  nonce: string
+  timestamp: string
+  friendlyName: string
+  serial: string
+  identifier: string
+}
+
 export interface DiagTokenFile {
   present: boolean
   tenantId?: number | string | null
@@ -269,6 +280,7 @@ export interface DiagReport {
   registrationToken: DiagRegToken
   podsAll: string
   timeline: DiagTimelineEvent[]
+  cfgagentSession: DiagCfgagentSession
   durationSec?: number
 }
 

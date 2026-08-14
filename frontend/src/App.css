@@ -1680,6 +1680,9 @@
 .diag-timeline-card {
   margin-top: 18px;
 }
+.diag-cfgagent-card {
+  margin-top: 18px;
+}
 .diag-timeline {
   list-style: none;
   margin: 0;

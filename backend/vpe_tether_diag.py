@@ -2647,6 +2647,34 @@ def build_timeline(d, ctx):
     return events
 
 
+def _cfgagent_session(d):
+    """Parse the richer cfgagent reconnect URL (stage 1) for the modern builds.
+
+    The reconnect line is:
+      Successfully reconnected to wss://config-<fqdn>:443/configdist/sf
+        ?license=<...>&serial=<...>&friendly_name=<...>&identifier=<...>
+        &swversion=<...>&protocol_version=<...>&roles=<...>&nonce=<...>&timestamp=<...>
+    Returns the parsed query params (the ones beyond the legacy
+    serial/identifier) so the UI can surface cfgagent sw/version, roles, etc."""
+    recon_lines = (d.get("podlogs") or {}).get("cfgagent_reconnect") or []
+    if not recon_lines:
+        return {}
+    line = recon_lines[-1]
+    params = {}
+    for kv in re.findall(r"([A-Za-z_]+)=([^&\"]+)", line):
+        params[kv[0]] = kv[1]
+    return {
+        "swversion": params.get("swversion") or "",
+        "protocolVersion": params.get("protocol_version") or "",
+        "roles": params.get("roles") or "",
+        "nonce": params.get("nonce") or "",
+        "timestamp": params.get("timestamp") or "",
+        "friendlyName": params.get("friendly_name") or "",
+        "serial": params.get("serial") or "",
+        "identifier": params.get("identifier") or "",
+    }
+
+
 # ===========================================================================
 # JSON report builder (--json mode)
 # ===========================================================================
@@ -3126,6 +3154,10 @@ def build_json_report(
         # Chronological tethering-history timeline (built / tethered / failed /
         # deprovisioned events with dates), reconstructed from on-box logs.
         "timeline": build_timeline(d, ctx),
+        # Modern-build cfgagent reconnect session details (sw/version, protocol
+        # version, roles, nonce, timestamp, friendly name) parsed from the
+        # richer reconnect URL. Empty on legacy builds / no reconnect seen.
+        "cfgagentSession": _cfgagent_session(d),
     }
     return report
 
