@@ -905,14 +905,70 @@ def chk_pre_pods(d, ctx):
     ts = (d.get("status") or {}).get("tethering_status") or {}
     pods = (d.get("pods") or {}).get("default_wide") or ""
     required = ["vpe-platform-cfgagent", "callhome-agent"]
-    running = all(p in pods for p in required)
+
+    # Parse each required pod's replicas + statuses from the wide table
+    # (columns: NAME READY STATUS RESTARTS AGE …). The collector runs
+    # `get pods -n default -o wide` (header included), so skip the header.
+    rows = [
+        ln.split()
+        for ln in pods.splitlines()
+        if ln.strip() and not ln.startswith("NAME")
+    ]
+
+    def pod_replicas(name):
+        return [
+            (parts[0], parts[2])
+            for parts in rows
+            if len(parts) >= 3 and parts[0].startswith(name)
+        ]
+
+    def any_running(name):
+        return any(st == "Running" for _, st in pod_replicas(name))
+
+    running = all(any_running(p) for p in required)
     vault = "vault-agent-injector" in pods
     ok = bool(ts.get("required_pods_running")) and running
-    return (
-        TICK if ok else CROSS
-    ), "required_pods_running=%s; cfgagent+callhome Running=%s; vault=%s" % (
-        ts.get("required_pods_running"),
-        running,
+
+    # Surface every non-Running replica of a required pod (Error,
+    # CrashLoopBackOff, …) — e.g. a cfgagent stuck in Error with many
+    # restarts next to a freshly restarted Running one. The bare
+    # substring check would hide the failed replica; this surfaces it.
+    failed = []
+    for p in required:
+        for name, st in pod_replicas(p):
+            if st != "Running":
+                failed.append("%s (%s)" % (name, st))
+    no_running = [p for p in required if not any_running(p)]
+
+    if ok and failed:
+        # A running replica satisfies the tethering gate, but a failed/Error
+        # replica is also present -> WARN (recent restart/recovery?).
+        return (
+            WARN,
+            "required_pods_running=%s; %s Running, but failed/Error replica(s) also present: %s — a recent restart/recovery? vault=%s"
+            % (
+                ts.get("required_pods_running"),
+                "+".join(required),
+                ", ".join(failed),
+                vault,
+            ),
+        )
+    if ok:
+        return (
+            TICK,
+            "required_pods_running=%s; cfgagent+callhome Running=%s; vault=%s"
+            % (ts.get("required_pods_running"), running, vault),
+        )
+    # not ok — cross. Name the missing/failed replicas explicitly.
+    parts = []
+    if not ts.get("required_pods_running"):
+        parts.append("required_pods_running=False")
+    if no_running:
+        parts.append("no Running replica for: %s" % ", ".join(no_running))
+    if failed:
+        parts.append("failed/Error replica(s): %s" % ", ".join(failed))
+    return CROSS, "%s; vault=%s" % (
+        "; ".join(parts) if parts else "required pods not Running",
         vault,
     )
 
@@ -2341,7 +2397,7 @@ CHECK_META = {
         "commands": ["cat /opt/ns/cfg/nscli_config.version", "cat /etc/hostname"],
     },
     "pre_pods": {
-        "what": "Pre-flight — required pods Running. Checks status.tethering_status.required_pods_running=true AND that vpe-platform-cfgagent + callhome-agent are actually in `kubectl get pods` Running state (vault injector presence is a bonus). This catches the fresh-box trap: required_pods_running can be true even when pods are internally failing — so this check cross-validates the boolean against the real pod list. A cross means the k8s layer itself is broken (CrashLoopBackOff / not scheduled), which is upstream of any tethering logic.",
+        "what": "Pre-flight — required pods Running. Checks status.tethering_status.required_pods_running=true AND that vpe-platform-cfgagent + callhome-agent each have at least one replica in `kubectl get pods` Running state (vault injector presence is a bonus). This catches the fresh-box trap: required_pods_running can be true even when pods are internally failing — so this check cross-validates the boolean against the real pod list. A cross means the k8s layer itself is broken (no Running replica / not scheduled), upstream of any tethering logic. WARN (not cross) when a Running replica exists BUT a failed/Error/CrashLoopBackOff replica of a required pod is also present — e.g. a cfgagent stuck in Error with many restarts next to a freshly restarted Running one (a recovering/recently-restarted pod the bare substring check would hide).",
         "sources": [
             "/opt/ns/appliance/status.json (.tethering_status.required_pods_running)",
             "kubectl get pods -n default -o wide",
