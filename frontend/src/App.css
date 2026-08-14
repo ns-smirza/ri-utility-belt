@@ -1715,7 +1715,8 @@
   background: #9aa3c8;
   border: 2px solid var(--card, #fff);
 }
-.diag-tl-item.diag-tl-built .diag-tl-dot { background: #5a6378; }
+.diag-tl-item.diag-tl-built .diag-tl-dot,
+.diag-tl-item.diag-tl-vpe_version_deployed .diag-tl-dot { background: #5a6378; }
 .diag-tl-item.diag-tl-tethered .diag-tl-dot { background: #167a3d; }
 .diag-tl-item.diag-tl-deprovisioned .diag-tl-dot { background: #8a6500; }
 .diag-tl-item.diag-tl-enrollment_failed .diag-tl-dot { background: #b3273c; }

@@ -2496,11 +2496,10 @@ def build_timeline(d, ctx):
     first_ts = min(all_ts) if all_ts else None
     events.append(
         {
-            "event": "built",
+            "event": "vpe_version_deployed",
             "ts": _ts_epoch(first_ts),
             "tsDate": dt_str(first_ts),
-            "label": "build %s on %s"
-            % (build.get("version") or "?", build.get("hostname") or "ns-vpe"),
+            "label": "VPE version %s deployed" % (build.get("version") or "?"),
         }
     )
 
