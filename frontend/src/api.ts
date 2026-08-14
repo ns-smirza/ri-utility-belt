@@ -205,6 +205,17 @@ export interface DiagConfirmation {
   ok: boolean
 }
 
+export interface DiagTimelineEvent {
+  event: string
+  ts: number | null
+  tsDate: string | null
+  label?: string
+  did?: string
+  fqdn?: string
+  tenantId?: number | string | null
+  detail?: string
+}
+
 export interface DiagTokenFile {
   present: boolean
   tenantId?: number | string | null
@@ -256,6 +267,7 @@ export interface DiagReport {
   reachabilityStatus: Record<string, unknown>
   registrationToken: DiagRegToken
   podsAll: string
+  timeline: DiagTimelineEvent[]
   durationSec?: number
 }
 

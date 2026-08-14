@@ -317,6 +317,7 @@ S = "/opt/ns/log/statsite.log"
 out["logs"] = {
     "nsclib": {
         "enroll_start": grep_all(N, r"Starting VPE certificate enrollment for device vpe:"),
+        "request_cert": grep_all(N, r"Requesting certificate from https?://callhome-"),
         "received_cert": grep_all(N, r"Received client certificate from management plane"),
         "enroll_success": grep_all(N, r"Certificate enrollment completed successfully"),
         "token_updated": grep_all(N, r"Registration token updated in"),
@@ -2374,6 +2375,222 @@ def likely_cause_hint(stage, d, ctx):
 
 
 # ===========================================================================
+# Tethering-history timeline (--json mode)
+# ===========================================================================
+def _ts_epoch(naive):
+    """Naive UTC datetime -> epoch seconds (reuses build_context's helper)."""
+    try:
+        return int((naive - _dt.datetime(1970, 1, 1)).total_seconds())
+    except Exception:
+        return None
+
+
+def _fqdn_from_request_lines(req_lines, after_ts):
+    """Find the 'Requesting certificate from https://callhome-<fqdn>' line closest
+    at/after after_ts and return the fqdn (the configdist endpoint host)."""
+    best = None
+    for ln in req_lines or []:
+        t = parse_line_ts(ln)
+        if t is None:
+            continue
+        if t >= after_ts and (best is None or t < best[1]):
+            best = (ln, t)
+    if best:
+        m = re.search(r"callhome-([^/\s\"']+)", best[0])
+        if m:
+            return m.group(1)
+    return None
+
+
+def build_timeline(d, ctx):
+    """Reconstruct a chronological tethering-history timeline from the on-box
+    logs + artifacts. Each enroll_start is a tether attempt (paired with the
+    next received_cert = success, or the next enroll_failed = failure); each
+    reset_retain is a deprovision. Returns a list of events sorted by time."""
+    logs = d.get("logs") or {}
+    n = logs.get("nsclib") or {}
+    cfg = d.get("cfg") or {}
+    build = d.get("build") or {}
+    rt = cfg.get("registration_token") or {}
+
+    def dt_str(naive):
+        return naive.strftime("%Y-%m-%d %H:%M UTC") if naive else None
+
+    events = []
+
+    # 1) Built / first seen — build version + hostname; ts = earliest log timestamp
+    #    (proxy for first boot; logs begin at first run after boot).
+    all_ts = []
+    for key in (
+        "enroll_start",
+        "request_cert",
+        "received_cert",
+        "enroll_failed",
+        "reset_retain",
+        "deprovisioning",
+        "reset_done",
+    ):
+        for ln in n.get(key, []) or []:
+            t = parse_line_ts(ln)
+            if t is not None:
+                all_ts.append(t)
+    nb = parse_openssl_dates(cfg.get("client_pem_openssl"))
+    if nb is not None:
+        all_ts.append(nb)
+    first_ts = min(all_ts) if all_ts else None
+    events.append(
+        {
+            "event": "built",
+            "ts": _ts_epoch(first_ts),
+            "tsDate": dt_str(first_ts),
+            "label": "build %s on %s"
+            % (build.get("version") or "?", build.get("hostname") or "ns-vpe"),
+        }
+    )
+
+    # 2) Tether attempts — each enroll_start line.
+    starts = n.get("enroll_start", []) or []
+    recvs = n.get("received_cert", []) or []
+    fails = n.get("enroll_failed", []) or []
+    reqs = n.get("request_cert", []) or []
+    used_recv = set()
+    used_fail = set()
+    for ln in starts:
+        t = parse_line_ts(ln)
+        if t is None:
+            continue
+        m = re.search(r"device vpe:([0-9a-f\-]+)", ln)
+        did = ("vpe:" + m.group(1)) if m else ""
+        # next received_cert at/after this start => success
+        best_recv = None
+        for j, rln in enumerate(recvs):
+            if j in used_recv:
+                continue
+            rt2 = parse_line_ts(rln)
+            if (
+                rt2 is not None
+                and rt2 >= t
+                and (best_recv is None or rt2 < best_recv[1])
+            ):
+                best_recv = (j, rt2, rln)
+        if best_recv is not None:
+            used_recv.add(best_recv[0])
+            tev = best_recv[1]
+            fqdn = _fqdn_from_request_lines(reqs, t)
+            # if this is the current cycle, prefer the token's fqdn/tenant
+            tok_fqdn = rt.get("fqdn") or ""
+            is_current = bool(tok_fqdn) and (fqdn == tok_fqdn or not fqdn)
+            events.append(
+                {
+                    "event": "tethered",
+                    "ts": _ts_epoch(tev),
+                    "tsDate": dt_str(tev),
+                    "did": did,
+                    "fqdn": fqdn or tok_fqdn or "",
+                    "tenantId": rt.get("tenant_id") if is_current else None,
+                    "detail": "Tethered to %s" % (fqdn or tok_fqdn or "?"),
+                }
+            )
+            continue
+        # next enroll_failed at/after this start => failure
+        best_fail = None
+        for j, fln in enumerate(fails):
+            if j in used_fail:
+                continue
+            ft = parse_line_ts(fln)
+            if ft is not None and ft >= t and (best_fail is None or ft < best_fail[1]):
+                best_fail = (j, ft, fln)
+        if best_fail is not None:
+            used_fail.add(best_fail[0])
+            fev = best_fail[1]
+            msg = best_fail[2]
+            mm = re.search(
+                r"(Certificate enrollment failed.*|HelmReconcilerError.*|HTTP [45]\d\d.*|Subject missing Country.*|failed to sign CSR.*)",
+                msg,
+            )
+            detail = mm.group(1)[:160] if mm else msg[:160]
+            events.append(
+                {
+                    "event": "enrollment_failed",
+                    "ts": _ts_epoch(fev),
+                    "tsDate": dt_str(fev),
+                    "did": did,
+                    "detail": detail,
+                }
+            )
+            continue
+        # no outcome recorded
+        events.append(
+            {
+                "event": "enrollment_started",
+                "ts": _ts_epoch(t),
+                "tsDate": dt_str(t),
+                "did": did,
+                "detail": "Enrollment started (no cert received / no failure recorded yet)",
+            }
+        )
+
+    # 3) Deprovision events — reset_retain log lines, deduped within a 120s window
+    #    (a single reset emits several log lines; recon_status carries the last attempt ts).
+    #    Multiple distinct reset_retain timestamps = multiple resets over the box's life.
+    dep_ts = []
+    for ln in n.get("reset_retain", []) or []:
+        t = parse_line_ts(ln)
+        if t is None:
+            continue
+        e = _ts_epoch(t)
+        if not any(abs(e - x) <= 120 for x in dep_ts):
+            dep_ts.append(e)
+    recon = cfg.get("recon_status") or {}
+    if recon.get("reset_last_attempt_ts"):
+        e = int(recon.get("reset_last_attempt_ts"))
+        if not any(abs(e - x) <= 120 for x in dep_ts):
+            dep_ts.append(e)
+    for e in dep_ts:
+        events.append(
+            {
+                "event": "deprovisioned",
+                "ts": e,
+                "tsDate": dt_str(_dt.datetime.utcfromtimestamp(e)),
+                "detail": "Reset retain-network",
+            }
+        )
+
+    # 4) Token-issued tether fallback — if the current registration_token has a created_at
+    #    but no enroll_start-based "tethered" event was recorded for it (e.g. the first tether's
+    #    enroll_start log aged out of retention), surface a "tethered" event at token-issued time.
+    tok_created = rt.get("created_at")
+    if tok_created:
+        te = int(tok_created)
+        near = any(
+            ev.get("event") == "tethered"
+            and ev.get("ts") is not None
+            and abs(ev["ts"] - te) <= 120
+            for ev in events
+        )
+        if not near:
+            events.append(
+                {
+                    "event": "tethered",
+                    "ts": te,
+                    "tsDate": dt_str(_dt.datetime.utcfromtimestamp(te)),
+                    "did": rt.get("device_id") or "",
+                    "fqdn": rt.get("fqdn") or "",
+                    "tenantId": rt.get("tenant_id"),
+                    "detail": "Tethered to %s (token-issued)" % (rt.get("fqdn") or "?"),
+                }
+            )
+
+    # 5) Sort by ts (None/unknown last).
+    def sort_key(e):
+        ts = e.get("ts")
+        return (ts is None, ts if ts is not None else 0)
+
+    events.sort(key=sort_key)
+    return events
+
+
+# ===========================================================================
 # JSON report builder (--json mode)
 # ===========================================================================
 # Per-check metadata: what it validates, the on-box sources it reads, and the
@@ -2848,6 +3065,9 @@ def build_json_report(
         # pods-overview card. The collector stores this as a TOP-LEVEL key
         # (out["pods_all"]), not nested under out["pods"]. Verbatim text.
         "podsAll": d.get("pods_all") or "",
+        # Chronological tethering-history timeline (built / tethered / failed /
+        # deprovisioned events with dates), reconstructed from on-box logs.
+        "timeline": build_timeline(d, ctx),
     }
     return report
 

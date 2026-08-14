@@ -545,6 +545,26 @@ ${JSON.stringify(report.tetheringStatus, null, 2)}`}
             </pre>
           </div>
         )}
+
+        {!busy && report && report.timeline.length > 0 && (
+          <div className="prov-result-card diag-timeline-card" data-testid="vpe-diag-timeline-card">
+            <div className="diag-status-head">
+              <h2 className="prov-result-title">Tethering history</h2>
+              <span className="diag-status-sub">lifecycle reconstructed from on-box logs</span>
+            </div>
+            <ol className="diag-timeline" data-testid="vpe-diag-timeline">
+              {report.timeline.map((e, i) => (
+                <li key={i} className={`diag-tl-item diag-tl-${e.event}`} data-testid={`vpe-diag-tl-${i}`}>
+                  <span className="diag-tl-dot" aria-hidden="true" />
+                  <span className="diag-tl-date">{e.tsDate || '—'}</span>
+                  <span className="diag-tl-event">{e.event.replace(/_/g, ' ')}</span>
+                  {e.fqdn && <span className="diag-tl-fqdn">{e.fqdn}</span>}
+                  {e.detail && <span className="diag-tl-detail">{e.detail}</span>}
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
         </>
       )}
     </div>

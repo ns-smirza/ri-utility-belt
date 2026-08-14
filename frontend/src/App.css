@@ -1675,6 +1675,73 @@
 .diag-podsall-pre {
   max-height: 60vh;
 }
+
+/* Tethering-history timeline */
+.diag-timeline-card {
+  margin-top: 18px;
+}
+.diag-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 26px;
+  position: relative;
+}
+.diag-timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  background: #e3e7ef;
+  border-radius: 1px;
+}
+.diag-tl-item {
+  position: relative;
+  padding: 8px 0 8px 22px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.diag-tl-dot {
+  position: absolute;
+  left: -19px;
+  top: 13px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #9aa3c8;
+  border: 2px solid var(--card, #fff);
+}
+.diag-tl-item.diag-tl-built .diag-tl-dot { background: #5a6378; }
+.diag-tl-item.diag-tl-tethered .diag-tl-dot { background: #167a3d; }
+.diag-tl-item.diag-tl-deprovisioned .diag-tl-dot { background: #8a6500; }
+.diag-tl-item.diag-tl-enrollment_failed .diag-tl-dot { background: #b3273c; }
+.diag-tl-item.diag-tl-enrollment_started .diag-tl-dot { background: #2b6cb0; }
+.diag-tl-date {
+  display: inline-block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--muted);
+  margin-right: 8px;
+  min-width: 150px;
+}
+.diag-tl-event {
+  font-weight: 700;
+  text-transform: capitalize;
+  margin-right: 8px;
+}
+.diag-tl-fqdn {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  color: #2b6cb0;
+  margin-right: 8px;
+}
+.diag-tl-detail {
+  display: block;
+  font-size: 12.5px;
+  color: #475068;
+  margin-top: 2px;
+}
 .diag-regtoken-fields {
   display: flex;
   flex-wrap: wrap;
