@@ -558,7 +558,7 @@ ${JSON.stringify(report.tetheringStatus, null, 2)}`}
                 <li key={i} className={`diag-tl-item diag-tl-${e.event}`} data-testid={`vpe-diag-tl-${i}`}>
                   <span className="diag-tl-dot" aria-hidden="true" />
                   <span className="diag-tl-date">{e.tsDate || '—'}</span>
-                  <span className="diag-tl-event">{e.event.replace(/_/g, ' ')}</span>
+                  <span className="diag-tl-event">{e.label ? e.label : e.event.replace(/_/g, ' ')}</span>
                   {e.fqdn && <span className="diag-tl-fqdn">{e.fqdn}</span>}
                   {e.detail && <span className="diag-tl-detail">{e.detail}</span>}
                 </li>
