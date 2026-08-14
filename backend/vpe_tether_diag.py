@@ -932,11 +932,12 @@ def chk_pre_pods(d, ctx):
     # the real pod list (the fresh-box trap), so it is informational only —
     # NOT part of the gate. A box with a Running replica should not cross
     # here solely because `required_pods_running=false`.
-
-    # Surface every non-Running replica of a required pod (Error,
-    # CrashLoopBackOff, …) — e.g. a cfgagent stuck in Error with many
-    # restarts next to a freshly restarted Running one. The bare
-    # substring check would hide the failed replica; this surfaces it.
+    #
+    # A failed/Error replica of a required pod (e.g. a cfgagent stuck in Error
+    # next to a freshly restarted Running one) does NOT fail this check — the
+    # Running replica satisfies the gate. The failed replica is surfaced in
+    # the `kubectl get pods -A` card instead, so it is visible without
+    # downgrading pre-flight from achieved (tick) to ignorable (warn).
     failed = []
     for p in required:
         for name, st in pod_replicas(p):
@@ -944,24 +945,19 @@ def chk_pre_pods(d, ctx):
                 failed.append("%s (%s)" % (name, st))
     no_running = [p for p in required if not any_running(p)]
 
-    if running and failed:
-        # A running replica satisfies the tethering gate, but a failed/Error
-        # replica is also present -> WARN (recent restart/recovery?).
-        return (
-            WARN,
-            "required_pods_running=%s; %s Running, but failed/Error replica(s) also present: %s — a recent restart/recovery? vault=%s"
-            % (
-                ts.get("required_pods_running"),
-                "+".join(required),
-                ", ".join(failed),
-                vault,
-            ),
-        )
     if running:
+        extra = (
+            (
+                "; also present: failed/Error replica(s): %s — see kubectl get pods -A card"
+                % ", ".join(failed)
+            )
+            if failed
+            else ""
+        )
         return (
             TICK,
-            "required_pods_running=%s; cfgagent+callhome Running=%s; vault=%s"
-            % (ts.get("required_pods_running"), running, vault),
+            "required_pods_running=%s; cfgagent+callhome Running=%s; vault=%s%s"
+            % (ts.get("required_pods_running"), running, vault, extra),
         )
     # No Running replica for a required pod -> cross. Name the missing and
     # any failed/Error replicas explicitly.
@@ -2396,7 +2392,7 @@ CHECK_META = {
         "commands": ["cat /opt/ns/cfg/nscli_config.version", "cat /etc/hostname"],
     },
     "pre_pods": {
-        "what": "Pre-flight — required pods Running. Checks status.tethering_status.required_pods_running=true AND that vpe-platform-cfgagent + callhome-agent each have at least one replica in `kubectl get pods` Running state (vault injector presence is a bonus). This catches the fresh-box trap: required_pods_running can be true even when pods are internally failing — so this check cross-validates the boolean against the real pod list. A cross means the k8s layer itself is broken (no Running replica / not scheduled), upstream of any tethering logic. WARN (not cross) when a Running replica exists BUT a failed/Error/CrashLoopBackOff replica of a required pod is also present — e.g. a cfgagent stuck in Error with many restarts next to a freshly restarted Running one (a recovering/recently-restarted pod the bare substring check would hide).",
+        "what": "Pre-flight — required pods Running. Checks that vpe-platform-cfgagent + callhome-agent EACH have at least one replica in `kubectl get pods` Running state (vault injector presence is a bonus). This catches the fresh-box trap: required_pods_running (status.json) can be true even when pods are internally failing, so this check cross-validates against the real pod list. status.json's required_pods_running is informational only — NOT part of the gate — a box with a Running replica does not cross solely because required_pods_running=false. A failed/Error replica of a required pod (e.g. a cfgagent stuck in Error next to a freshly restarted Running one) does NOT fail this check either — the Running replica satisfies the gate, and the failed replica is surfaced in the `kubectl get pods -A` card instead. CROSS only when a required pod has NO Running replica (k8s layer broken / not scheduled), upstream of any tethering logic.",
         "sources": [
             "/opt/ns/appliance/status.json (.tethering_status.required_pods_running)",
             "kubectl get pods -n default -o wide",
