@@ -1248,7 +1248,20 @@ def chk_0f_cert(d, ctx):
     key_ok = bool(cfg.get("client_key_exists"))
     ca_ok = bool(cfg.get("issuer_ca_exists"))
     did = ctx.get("did") or ""
-    cn_matches = bool(did) and (did in sub.get("cn", ""))
+
+    # The cert CN is 'vpe:<did>' on legacy builds but 'vpe-<did>-<suffix>' on
+    # modern builds (a hyphen after 'vpe' + a tenant/nonce suffix appended).
+    # Extract the device UUID (4-4-4-4-12) from both and compare, so both
+    # formats match correctly.
+    def _uuid(s):
+        m = re.search(
+            r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", s or ""
+        )
+        return m.group(1) if m else ""
+
+    did_uuid = _uuid(did)
+    cn_uuid = _uuid(sub.get("cn", ""))
+    cn_matches = bool(did_uuid) and (did_uuid == cn_uuid)
     country_ok = sub.get("has_country")
     # Cycle freshness: the cert must have been (re)issued THIS cycle. client.pem
     # notBefore precedes cycle_start => the cert is a stale leftover from a prior
@@ -1258,7 +1271,10 @@ def chk_0f_cert(d, ctx):
         nb_current = nb >= (ctx["cycle_start_dt"] - _dt.timedelta(seconds=120))
     problems = []
     if not cn_matches:
-        problems.append("CN=%r != expected vpe:<did>=%r" % (sub.get("cn"), did))
+        problems.append(
+            "CN=%r does not bind to the current device UUID %r"
+            % (sub.get("cn"), did_uuid or "(unknown)")
+        )
     if not country_ok:
         problems.append(
             "Country (C=) missing in subject — pre-ENG-1007978 build would hit TCS HTTP 500"
