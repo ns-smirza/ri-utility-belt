@@ -1358,8 +1358,7 @@
   border-radius: 8px;
   padding: 4px 10px;
   font-size: 12px;
-  max-width: 280px;
-  overflow: hidden;
+  max-width: 420px;
 }
 .diag-chip-label {
   color: var(--muted);
@@ -1371,9 +1370,8 @@
 }
 .diag-chip-value {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
 }
 .diag-counts {
   display: flex;

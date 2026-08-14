@@ -2654,7 +2654,9 @@ def _cfgagent_session(d):
         ?license=<...>&serial=<...>&friendly_name=<...>&identifier=<...>
         &swversion=<...>&protocol_version=<...>&roles=<...>&nonce=<...>&timestamp=<...>
     Returns the parsed query params (the ones beyond the legacy
-    serial/identifier) so the UI can surface cfgagent sw/version, roles, etc."""
+    serial/identifier) so the UI can surface cfgagent sw/version, roles, etc.
+    The timestamp is URL-decoded (+ -> space, %3A -> :, %2F -> /, …) and
+    the cfgagent-appended ' --BUT connection outage…' note is stripped."""
     recon_lines = (d.get("podlogs") or {}).get("cfgagent_reconnect") or []
     if not recon_lines:
         return {}
@@ -2662,12 +2664,19 @@ def _cfgagent_session(d):
     params = {}
     for kv in re.findall(r"([A-Za-z_]+)=([^&\"]+)", line):
         params[kv[0]] = kv[1]
+    ts = params.get("timestamp") or ""
+    # URL-decode common escapes without importing urllib.
+    ts = re.sub(r"%([0-9A-Fa-f]{2})", lambda mm: chr(int(mm.group(1), 16)), ts)
+    ts = re.sub(r"\+", " ", ts)
+    # Drop the cfgagent-appended outage note: ' --BUT connection outage…'
+    # and the trailing epoch (' at <epoch>:'), keeping just the datetime.
+    ts = ts.split(" --BUT ")[0].split(" at ")[0].strip()
     return {
         "swversion": params.get("swversion") or "",
         "protocolVersion": params.get("protocol_version") or "",
         "roles": params.get("roles") or "",
         "nonce": params.get("nonce") or "",
-        "timestamp": params.get("timestamp") or "",
+        "timestamp": ts,
         "friendlyName": params.get("friendly_name") or "",
         "serial": params.get("serial") or "",
         "identifier": params.get("identifier") or "",
