@@ -14,7 +14,7 @@ const VIEWS: ViewDef[] = [
   { key: 'provisioning', label: 'Provisioning', icon: '⚙️' },
   { key: 'tenant-finder', label: 'Tenant ID Finder', icon: '🔍' },
   { key: 'vpe-tether-diag', label: 'VPE Tethering Diagnosis', icon: '🩺' },
-  { key: 'pdv-dut', label: 'Appliance PDV DUT Version', icon: '🖥️' },
+  { key: 'apl-pdv-dut-ver', label: 'Appliance PDV DUT Version', icon: '🖥️' },
 ]
 
 const VIEW_COMPONENTS: Record<string, () => JSX.Element> = {
@@ -22,13 +22,13 @@ const VIEW_COMPONENTS: Record<string, () => JSX.Element> = {
   'provisioning': Provisioning,
   'tenant-finder': TenantFinder,
   'vpe-tether-diag': VpeTetherDiag,
-  'pdv-dut': PdvDutVersion,
+  'apl-pdv-dut-ver': PdvDutVersion,
 }
 
 const VIEW_KEYS = new Set(VIEWS.map((v) => v.key))
 
 // The active view is driven by location.hash so each utility has a shareable,
-// copyable URL (e.g. http://…:5001/#pdv-dut) and back/forward navigation works.
+// copyable URL (e.g. http://…:5001/#apl-pdv-dut-ver) and back/forward navigation works.
 function readHash(): string {
   const h = window.location.hash.replace(/^#/, '')
   return VIEW_KEYS.has(h) ? h : VIEWS[0].key
