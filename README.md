@@ -81,6 +81,27 @@ tethering scenario.
 - Internal scenario codes (S1/S2/S3/S4) are never shown in the UI — only human-readable
   labels and the status badge.
 
+### 5. Appliance PDV DUT Version 🖥️
+Software versions on each site's PDV DUT appliance, gathered in parallel from all
+13 sites every 30 min (soft refresh button for on-demand). No credentials in the
+UI — fully backend-driven.
+
+- For each site, reads the **default `APPLIANCE_IP_ADDRESS` parameter** from the
+  corresponding Jenkins job (`appliance-pdv-<site>` on the internal appliance
+  Jenkins) — i.e. the job's Configure-parameters value, not a build.
+- SSHes into that DUT (`sshpass`, `nsadmin` / `nsappliance`, same password-only
+  wrapper as the tethering diagnostic) and runs `show version-info` through
+  `nsshell` over a forced pty. nsshell needs a tty and has no clean EOF exit, so
+  the backend drives it interactively: waits for the first prompt, sends the
+  command, parses the seven version lines, sends `exit`, and kills the process
+  group as a safety net. (Newer builds drop stdin sent before the prompt, hence
+  the prompt-wait.)
+- Table columns: Stack · Appliance IP · Software · Content · DPOP · OPLP ·
+  Rollback · Threat-feed · URLDB · Hostname · Status (✓ reached / ✗ with error).
+- All 13 sites refresh in parallel (one thread per site); a refresh takes ~5-10s.
+- Header shows "last refreshed X min ago" and a per-refresh reached/total count.
+- Read-only — only reads the Jenkins parameter and `show version-info`.
+
 ---
 
 ## Architecture
@@ -92,12 +113,14 @@ Browser ──HTTP──▶ Flask (port 5001, 0.0.0.0)
                    ├── /api/provisioner/*             (Provisioning)
                    ├── /api/tenant-finder/*           (Tenant ID Finder)
                    ├── /api/vpe-diag/run              (VPE Tethering Diagnosis)
+                   ├── /api/pdv-dut/data|refresh      (Appliance PDV DUT Version)
                    └── /api/stacks                    (shared cluster list)
                             │
                             ▼
                    bash stacks_build_version.sh --json   (kubectl against ~/rancher/*.yaml)
                    kubectl exec into callhomeservice / provisioner-core pods
                    sshpass → VPE (read-only collector) for tethering diagnosis
+                   Jenkins API → default APPLIANCE_IP_ADDRESS, sshpass → DUT (show version-info)
 ```
 
 - **Frontend** (`frontend/`): Vite + React + TypeScript. Built locally, the static `dist/`
@@ -154,6 +177,7 @@ ri-utility-belt/
 │   ├── tenant_finder.py        # Tenant ID Finder blueprint (kubectl-exec into provisioner-core)
 │   ├── vpe_diag.py             # VPE Tethering Diagnosis blueprint (runs vpe_tether_diag.py --json)
 │   ├── vpe_tether_diag.py      # read-only tethering diagnostic script (SSH + on-box collector)
+│   ├── pdv_dut.py              # Appliance PDV DUT Version blueprint (Jenkins param → SSH show version-info)
 │   ├── fetch_kubeconfigs.sh    # periodic Rancher kubeconfig refresher (cron-run)
 │   └── rca-dashboard.service   # systemd unit
 ├── frontend/
@@ -165,7 +189,7 @@ ri-utility-belt/
 │   └── src/
 │       ├── main.tsx, App.tsx, App.css, index.css, types.ts, api.ts
 │       ├── components/  (Sidebar, Tabs, RefreshButton, SearchBar, SnapshotButton, StatusLabels, DataTable)
-│       └── views/       (StackVersionDashboard, Provisioning, TenantFinder, VpeTetherDiag)
+│       └── views/       (StackVersionDashboard, Provisioning, TenantFinder, VpeTetherDiag, PdvDutVersion)
 └── script/
     └── stacks_build_version.sh   # per-stack image/package gatherer (--json for the dashboard)
 ```
@@ -204,7 +228,7 @@ The tethering script also honors `VPE_SSH_USER` / `VPE_SSH_PASS` for its sshpass
 The remote app lives at `~/rca-dashboard/` with this layout:
 ```
 ~/rca-dashboard/
-├── app.py  provisioner.py  tenant_finder.py  vpe_diag.py  vpe_tether_diag.py
+├── app.py  provisioner.py  tenant_finder.py  vpe_diag.py  vpe_tether_diag.py  pdv_dut.py
 ├── fetch_kubeconfigs.sh  rca-dashboard.service  (also installed to /etc/systemd/system/)
 ├── stacks_build_version.sh
 └── dist/   (built frontend)
@@ -221,7 +245,8 @@ cd frontend && npm run build && cd ..
 # 2. Ship the backend + script
 rsync -avz -e "tsh ssh --cluster iad0" \
   backend/app.py backend/provisioner.py backend/tenant_finder.py \
-  backend/vpe_diag.py backend/vpe_tether_diag.py backend/fetch_kubeconfigs.sh \
+  backend/vpe_diag.py backend/vpe_tether_diag.py backend/pdv_dut.py \
+  backend/fetch_kubeconfigs.sh \
   "$REMOTE:~/rca-dashboard/"
 
 rsync -avz -e "tsh ssh --cluster iad0" \
@@ -239,7 +264,11 @@ tsh ssh --cluster iad0 "$REMOTE" \
 First-time install: copy `backend/rca-dashboard.service` to `/etc/systemd/system/`, then
 `sudo systemctl daemon-reload && sudo systemctl enable --now rca-dashboard.service`. For the
 NPE kubeconfig refresh, put a Rancher API token in `~/.rancher_prime_token` (mode 600) and
-install the cron entry from `backend/fetch_kubeconfigs.sh` (e.g. `17 3 * * *`).
+install the cron entry from `backend/fetch_kubeconfigs.sh` (e.g. `17 3 * * *`). For the
+Appliance PDV DUT Version utility, put the Jenkins Basic-auth `user:token` string in
+`~/.jenkins_appliance_token` (mode 600) — the backend reads it (or `JENKINS_AUTH` env) to
+fetch each job's default `APPLIANCE_IP_ADDRESS`. Its 30-min refresh scheduler starts
+automatically with the service.
 
 Logs: `sudo journalctl -u rca-dashboard.service -f` (on the appliance).
 
@@ -259,6 +288,11 @@ Logs: `sudo journalctl -u rca-dashboard.service -f` (on the appliance).
 - **Tethering check metadata** (`CHECK_META` in `backend/vpe_tether_diag.py`): per-check
   `what`/`sources`/`commands` shown in the expandable rows. The `--json` report is built by
   `build_json_report()`; the `evaluate_checks()` helper is shared with the text renderer.
+- **Appliance PDV DUT Version** (`backend/pdv_dut.py`): `PDV_SITES` is the fixed list of
+  (job-suffix, display-name) pairs; `JENKINS_URL`, `JENKINS_AUTH`/`~/.jenkins_appliance_token`
+  for the Jenkins API; `PDV_SSH_USER`/`PDV_SSH_PASS` (default `nsadmin`/`nsappliance`),
+  `PDV_SSH_TIMEOUT`, `PDV_JENKINS_TIMEOUT`, and `PDV_REFRESH_INTERVAL` (default 1800s = 30 min)
+  for the auto-refresh scheduler.
 
 ---
 
@@ -272,6 +306,7 @@ Logs: `sudo journalctl -u rca-dashboard.service -f` (on the appliance).
      { key: 'provisioning', label: 'Provisioning', icon: '⚙️' },
      { key: 'tenant-finder', label: 'Tenant ID Finder', icon: '🔍' },
      { key: 'vpe-tether-diag', label: 'VPE Tethering Diagnosis', icon: '🩺' },
+     { key: 'pdv-dut', label: 'Appliance PDV DUT Version', icon: '🖥️' },
      { key: 'my-utility', label: 'My Utility', icon: '🧰' },   // add
    ]
    const VIEW_COMPONENTS: Record<string, () => JSX.Element> = { …, 'my-utility': MyUtility }
@@ -286,8 +321,8 @@ The sidebar picks up the new entry automatically.
 ## Notes
 
 - **No secrets in this repo.** Kubeconfigs, API tokens, and certs live on the appliance
-  (`~/rancher/*.yaml`, `~/.rancher_prime_token`, `~/.rancher_*_api_token.cfg`) and are
-  git-ignored. Never commit them.
+  (`~/rancher/*.yaml`, `~/.rancher_prime_token`, `~/.rancher_*_api_token.cfg`,
+  `~/.jenkins_appliance_token`) and are git-ignored. Never commit them.
 - The Stack Version Dashboard's data shape (`images: [{image, running, status, pods}]`,
   `packages: {category: [files]}`) is produced by `script/stacks_build_version.sh --json`.
 - The Provisioning and Tenant ID Finder utilities reach the in-cluster services by

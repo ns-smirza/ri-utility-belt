@@ -306,3 +306,33 @@ export async function runVpeDiag(
   })
   return res.json()
 }
+
+// --- Appliance PDV DUT Version ---
+
+export interface PdvVersionRow {
+  site: string
+  displayName: string
+  ip: string | null
+  reachable: boolean
+  versions: Record<string, string> | null
+  hostname: string
+  error: string | null
+}
+
+export interface PdvDutData {
+  rows: PdvVersionRow[]
+  lastRefresh: string | null
+  refreshing: boolean
+  lastError: string | null
+}
+
+export async function fetchPdvDut(): Promise<PdvDutData> {
+  const res = await fetch('/api/pdv-dut/data', { cache: 'no-store' })
+  if (!res.ok) throw new Error(`/api/pdv-dut/data failed: ${res.status}`)
+  return res.json()
+}
+
+export async function refreshPdvDut(): Promise<void> {
+  const res = await fetch('/api/pdv-dut/refresh', { method: 'POST' })
+  if (!res.ok) throw new Error(`/api/pdv-dut/refresh failed: ${res.status}`)
+}

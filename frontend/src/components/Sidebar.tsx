@@ -25,19 +25,24 @@ export function Sidebar({ views, active, onChange }: Props) {
         {views.map((v) => {
           const isActive = active === v.key
           return (
-            <button
+            <a
               key={v.key}
-              type="button"
+              href={`#${v.key}`}
               className={`nav-item${isActive ? ' nav-active' : ''}`}
               data-testid={`nav-${v.key}`}
               aria-current={isActive ? 'page' : undefined}
-              onClick={() => onChange(v.key)}
+              onClick={(e) => {
+                // Let the href be copyable/shareable, but drive navigation through
+                // onChange so state + hash stay in sync (and back/forward work).
+                e.preventDefault()
+                onChange(v.key)
+              }}
             >
               <span className="nav-icon" aria-hidden="true">
                 {v.icon}
               </span>
               <span className="nav-label">{v.label}</span>
-            </button>
+            </a>
           )
         })}
       </nav>

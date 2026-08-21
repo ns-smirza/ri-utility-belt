@@ -26,6 +26,7 @@ import types
 from provisioner import create_provisioner_bp
 from tenant_finder import create_tenant_finder_bp
 from vpe_diag import create_vpe_diag_bp
+from pdv_dut import create_pdv_dut_bp
 
 # --- configuration (overridable via env) ---
 HOME = os.path.expanduser("~")
@@ -81,6 +82,7 @@ _cfg = types.SimpleNamespace(
 app.register_blueprint(create_provisioner_bp(_cfg))
 app.register_blueprint(create_tenant_finder_bp(_cfg))
 app.register_blueprint(create_vpe_diag_bp(_cfg))
+app.register_blueprint(create_pdv_dut_bp())
 
 
 def _list_stacks():

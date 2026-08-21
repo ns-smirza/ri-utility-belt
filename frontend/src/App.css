@@ -70,6 +70,7 @@
   cursor: pointer;
   font-size: 13.5px;
   font-weight: 500;
+  text-decoration: none;
   transition: background 0.14s ease, color 0.14s ease, border-color 0.14s ease;
 }
 
@@ -1898,5 +1899,131 @@
   .diag-expand {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== Appliance PDV DUT Version ===== */
+.pdv-error-banner {
+  background: #fdf4f5;
+  border: 1px solid #f0c9cf;
+  color: #b3273c;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+.pdv-table-wrap {
+  background: var(--card);
+  border: 1px solid var(--border, #e3e7ef);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: auto;
+  max-height: calc(100vh - 250px);
+  min-height: 180px;
+}
+.pdv-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+.pdv-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  background: #f7f9fc;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border, #e3e7ef);
+  font-weight: 700;
+  white-space: nowrap;
+}
+.pdv-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #eef1f6;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.pdv-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.pdv-table tbody tr:hover {
+  background: #f6f8fc;
+}
+.pdv-th-stack,
+.pdv-stack {
+  font-weight: 700;
+  color: var(--text);
+}
+.pdv-th-ip,
+.pdv-ip {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #475068;
+}
+.pdv-th-ver,
+.pdv-ver {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+.pdv-ver {
+  color: #1f2a44;
+}
+/* Software is the headline value — give it a calm accent tint (not loud). */
+.pdv-table .pdv-th-sw {
+  background: #e3ecfd;
+  color: #27407a;
+}
+.pdv-table .pdv-ver-sw {
+  background: #eef3ff;
+  color: var(--accent);
+  font-weight: 600;
+}
+.pdv-table tbody tr:hover .pdv-ver-sw {
+  background: #e6eeff;
+}
+.pdv-th-host,
+.pdv-host {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: #5a6378;
+}
+.pdv-missing {
+  color: #b6bdce;
+}
+.pdv-row-fail {
+  background: #fdf4f5;
+}
+.pdv-row-fail:hover {
+  background: #fbe9eb;
+}
+.pdv-status {
+  text-align: center;
+}
+.pdv-ok {
+  color: var(--ok);
+  font-weight: 700;
+}
+.pdv-bad {
+  color: var(--prod);
+  font-weight: 700;
+  cursor: help;
+}
+.pdv-err-text {
+  display: block;
+  font-size: 11px;
+  color: #8a4a52;
+  margin-top: 2px;
+  max-width: 260px;
+  white-space: normal;
+  line-height: 1.4;
+}
+.pdv-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 28px;
 }
 
