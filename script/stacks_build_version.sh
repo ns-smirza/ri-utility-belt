@@ -37,7 +37,7 @@ for kube in *.yaml; do
   KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get pods -n risk-insights -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[*].image}{"\n"}{end}' 2>/dev/null > "$out.map"
 
   # --- images (with pod name + status for the dashboard's running indicator) ---
-  grep -E "artifactservice|artifactsync|vpe-manager|callhome|alarmmanager|cloudmetricsgenerator" "$out.pods" 2>/dev/null | \
+  grep -E "artifactservice|artifactsync|vpe-manager|callhome|alarmmanager|cloudmetricsgenerator|diagnostic" "$out.pods" 2>/dev/null | \
     grep -v "deprovision" | \
     awk '{print $1, $3}' | \
     while read -r p status; do
