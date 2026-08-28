@@ -50,6 +50,34 @@ for kube in *.yaml; do
         done
     done > "$out.img"
 
+  # --- pod rollout history (last 2 revisions) per tracked deployment ---
+  # Derive each deployment name from its pod name (strip the ReplicaSet + pod
+  # hash suffix), look up that deployment's image-base from the pod->image map,
+  # and run `kubectl rollout history` to capture the two highest revisions
+  # (current = highest, previous = second-highest). Only RI images are emitted,
+  # matching the IMG filter above, so the JSON renderer can join on image-base.
+  grep -E "artifactservice|artifactsync|vpe-manager|callhome|alarmmanager|cloudmetricsgenerator|diagnostic" "$out.pods" 2>/dev/null | \
+    grep -v "deprovision" | \
+    awk '{print $1}' | \
+    sed -E 's/-[0-9a-f]{8,12}-[0-9a-z]{4,6}$//' | \
+    sort -u | \
+    while read -r dep; do
+      [ -n "$dep" ] || continue
+      # A pod may have several containers (2/2); the map field is space-joined
+      # images, so split on spaces and pick the RI one — same logic as the IMG
+      # loop above — then strip to image-base (no registry path, no :tag).
+      imgbase=$(awk -v d="$dep-" -F '\t' 'index($1,d)==1 {print $2; exit}' "$out.map" 2>/dev/null | tr ' ' '\n' | grep -E "risk-insights-(production|release|develop)-docker" | sed 's#.*/##; s/:.*//' | head -1)
+      [ -n "$imgbase" ] || continue
+      revs=$(KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" rollout history deployment/"$dep" -n risk-insights 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {print $1}' | sort -n | tail -2)
+      cur=$(printf '%s\n' "$revs" | tail -1)
+      prev=$(printf '%s\n' "$revs" | sed -n '1p')
+      if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
+        printf "ROLL|%s|%s|%s\n" "$imgbase" "$cur" "$prev"
+      elif [ -n "$cur" ]; then
+        printf "ROLL|%s|%s|\n" "$imgbase" "$cur"
+      fi
+    done > "$out.roll"
+
   # --- internal packages, per category, newest-first (GNU sort -V inside the pod) ---
   art_pod=$(awk '$3 == "Running" && $1 ~ /^artifactservice-/ {print $1; exit}' "$out.pods" 2>/dev/null)
 
@@ -81,9 +109,10 @@ for kube in *.yaml; do
   {
     echo "STACK|$kube"
     cat "$out.img"
+    [ -f "$out.roll" ] && cat "$out.roll"
     [ -f "$out.pkg" ] && cat "$out.pkg"
   } > "$out"
-  rm -f "$out.img" "$out.pkg" "$out.pods" "$out.map"
+  rm -f "$out.img" "$out.roll" "$out.pkg" "$out.pods" "$out.map"
 ) &
 done
 wait
@@ -98,6 +127,7 @@ if [ "$json" -eq 1 ]; then
     | reduce $rows[] as $r ({cur:null, recs:[]};
         (if $r[0]=="STACK" then .cur = $r[1] else . end)
         | (if $r[0]=="IMG" and .cur != null then .recs += [[.cur, "IMG", $r[1], $r[2], $r[3]]] else . end)
+        | (if $r[0]=="ROLL" and .cur != null then .recs += [[.cur, "ROLL", $r[1], $r[2], $r[3]]] else . end)
         | (if $r[0]=="PKG" and .cur != null then .recs += [[.cur, "PKG", $r[1], $r[2]]] else . end))
     | .recs
     | sort_by(.[0])
@@ -105,6 +135,10 @@ if [ "$json" -eq 1 ]; then
     | map({
         name: .[0][0],
         images: (
+          (map(select(.[1]=="ROLL"))
+            | map({(.[2]): {current: (.[3] | tonumber), previous: (try (.[4] | tonumber) catch null)}})
+            | add // {}) as $roll
+          |
           map(select(.[1]=="IMG") | .[2:])
           | group_by(.[0] | split(":")[0])
           | map(. as $g | (any($g[]; .[2]=="Running")) as $r | if $r then map(select(.[2]=="Running")) else . end)
@@ -114,7 +148,8 @@ if [ "$json" -eq 1 ]; then
               image: .[0][0],
               running: (map(.[2] == "Running") | all),
               status: ([.[] | .[2]] | unique | join(", ")),
-              pods: (map({name: .[1], status: .[2]}))
+              pods: (map({name: .[1], status: .[2]})),
+              rollout: ($roll[.[0][0] | split(":")[0]] // null)
             })
         ),
         packages: (reduce .[] as $r ({}; if $r[1]=="PKG" then .[$r[2]] += [$r[3]] else . end))

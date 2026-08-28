@@ -20,11 +20,15 @@ adding a new utility is a one-line entry in the view registry (see
 Per-Rancher-cluster view of the running **pod images** and the **internal packages**
 shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
 
-- Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images.
+- Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images, Pod Rollout History.
 - **Pod Images** column shows one running replica per service with a green dot; a red dot
   (with status tooltip: `Running`, `CrashLoopBackOff`, `Terminating`, …) appears only when
   a service has **no** running replica. Gathers `artifactservice`, `artifactsync`,
-  `vpe-manager`, `callhome`, `alarmmanager`, and `cloudmetricsgenerator` pods.
+  `vpe-manager`, `callhome`, `alarmmanager`, `cloudmetricsgenerator`, and `diagnostic` pods.
+- **Pod Rollout History** column shows the last two `kubectl rollout history` revisions
+  per deployment (`current ← previous`, e.g. `226 ← 225`), aligned line-for-line with the
+  Pod Images column. A single-revision deployment shows just the current revision; `—`
+  when no history is available.
 - Compact/Full toggle (click the title): compact strips prefixes/suffixes
   (e.g. `NSKVM-1.1.36.zip` → `1.1.36`); full shows the raw strings.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.

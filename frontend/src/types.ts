@@ -5,11 +5,18 @@ export interface PodInfo {
   status: string
 }
 
+export interface RolloutInfo {
+  current: number
+  previous?: number | null
+}
+
 export interface ImageInfo {
   image: string
   running: boolean
   status: string
   pods: PodInfo[]
+  /** Last two deployment revisions (current + previous), if available. */
+  rollout?: RolloutInfo | null
 }
 
 export interface Stack {

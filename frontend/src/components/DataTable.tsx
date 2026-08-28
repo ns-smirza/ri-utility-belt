@@ -10,7 +10,7 @@ interface Props {
   scrollRef: Ref<HTMLDivElement>
 }
 
-type ColKind = 'stack' | 'env' | 'images' | 'pkg'
+type ColKind = 'stack' | 'env' | 'images' | 'rollout' | 'pkg'
 interface Column {
   key: string
   label: string
@@ -31,6 +31,7 @@ const COLUMNS: Column[] = [
   { key: 'vpe-content', label: 'Content', kind: 'pkg' },
   { key: 'vpe-geoipdb', label: 'GeoIP DB', kind: 'pkg' },
   { key: 'images', label: 'Pod Images', kind: 'images' },
+  { key: 'rollout', label: 'Pod Rollout History', kind: 'rollout' },
 ]
 
 // Per-column prefix/suffix to strip in the compact (default) view.
@@ -131,6 +132,43 @@ function ImagesCell({ images, query }: { images: ImageInfo[]; query: string }) {
   )
 }
 
+function RolloutCell({ images }: { images: ImageInfo[] }) {
+  if (!images || images.length === 0) {
+    return <span className="empty-cell">—</span>
+  }
+  // Iterate images in the same order as ImagesCell so each rollout line aligns
+  // with its pod-image line. Show the last two revisions: current ← previous.
+  return (
+    <div className="multi-cell">
+      {images.map((im, i) => {
+        const r = im.rollout
+        let content: ReactNode = <span className="empty-cell">—</span>
+        let tip: string | undefined
+        if (r) {
+          if (r.previous != null) {
+            content = (
+              <span className="rollout-rev">
+                <span className="rollout-cur">{r.current}</span>
+                <span className="rollout-arrow" aria-hidden="true"> ← </span>
+                <span className="rollout-prev">{r.previous}</span>
+              </span>
+            )
+            tip = `revisions ${r.previous} → ${r.current}`
+          } else {
+            content = <span className="rollout-rev rollout-single">{r.current}</span>
+            tip = `revision ${r.current} (no prior history)`
+          }
+        }
+        return (
+          <div key={i} className="cell-line rollout-line" data-testid={`rollout-${i}`} title={tip}>
+            {content}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export function DataTable({ stacks, refreshing, query, fullVersions, tableRef, scrollRef }: Props) {
   return (
     <div className="table-card" data-testid="table-card">
@@ -194,6 +232,13 @@ export function DataTable({ stacks, refreshing, query, fullVersions, tableRef, s
                       return (
                         <td key={c.key} data-testid={testId}>
                           <ImagesCell images={s.images} query={query} />
+                        </td>
+                      )
+                    }
+                    if (c.kind === 'rollout') {
+                      return (
+                        <td key={c.key} data-testid={testId}>
+                          <RolloutCell images={s.images} />
                         </td>
                       )
                     }

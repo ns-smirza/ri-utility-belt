@@ -1007,6 +1007,29 @@
   gap: 7px;
 }
 
+.rollout-line {
+  display: flex;
+  align-items: center;
+}
+.rollout-rev {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+}
+.rollout-cur {
+  color: var(--accent, #2f5fd0);
+  font-weight: 600;
+}
+.rollout-arrow {
+  color: #8a93a8;
+}
+.rollout-prev {
+  color: #5b6478;
+}
+.rollout-single {
+  color: var(--accent, #2f5fd0);
+  font-weight: 600;
+}
+
 .pod-dot-wrap {
   position: relative;
   display: inline-flex;
