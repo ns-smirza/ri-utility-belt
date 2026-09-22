@@ -19,6 +19,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import subprocess
 
 from flask import Blueprint, jsonify, request
@@ -173,9 +174,16 @@ def create_provisioner_bp(cfg):
 
         p = run(
             base
-            + ["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.containers[0].name}"]
+            + ["-n", ns, "get", "pod", pod, "-o", "jsonpath={.spec.containers[*].name}"]
         )
-        container = p.stdout.strip() or None
+        # Container order varies across stacks (e.g. AM2 lists the `proxy`
+        # sidecar first, LON3 lists `callhome` first), so don't assume
+        # containers[0] — pick the `callhome` container explicitly, falling
+        # back to the first container if it's absent for some reason.
+        names = p.stdout.split()
+        container = None
+        if names:
+            container = "callhome" if "callhome" in names else names[0]
 
         exec_prefix = base + ["-n", ns, "exec", pod]
         if container:
@@ -205,6 +213,9 @@ def create_provisioner_bp(cfg):
             body = json.dumps({flag: value})
             cmd += ["-X", "POST", "-H", "Content-Type: application/json", "-d", body]
         cmd += [url]
+        # Shell-joined, copy-pasteable form of the exact command being run
+        # (kubeconfig path inline) — surfaced to the UI for transparency.
+        cmd_str = shlex.join(cmd)
 
         p = run(cmd)
         if p.returncode != 0:
@@ -217,11 +228,11 @@ def create_provisioner_bp(cfg):
             payload = json.loads(raw)
         except ValueError:
             raise ProvisionerError("Provisioner returned non-JSON response", raw)
-        return payload, raw
+        return payload, raw, cmd_str
 
     def _check(stack, tenant, flags):
         exec_prefix, host, port, _ns, _pod, _c = _discover(stack)
-        payload, raw = _curl(exec_prefix, host, port, tenant, "GET")
+        payload, raw, cmd_str = _curl(exec_prefix, host, port, tenant, "GET")
         if payload.get("status") != "success":
             msg = payload.get("message") or payload.get("error") or "provisioner error"
             raise ProvisionerError(msg, raw)
@@ -234,17 +245,19 @@ def create_provisioner_bp(cfg):
             if enabled is not True:
                 all_enabled = False
             out.append({"flag": f, "value": v, "enabled": enabled, "state": state})
-        return {"ok": True, "flags": out, "allEnabled": all_enabled}
+        return {"ok": True, "flags": out, "allEnabled": all_enabled, "cmd": cmd_str}
 
     def _set(stack, tenant, value, flags):
         exec_prefix, host, port, _ns, _pod, _c = _discover(stack)
         results = []
+        commands = []
         ok_count = 0
         for f in flags:
             try:
-                payload, raw = _curl(
+                payload, raw, cmd_str = _curl(
                     exec_prefix, host, port, tenant, "POST", flag=f, value=value
                 )
+                commands.append({"label": "Set {} -> {}".format(f, value), "cmd": cmd_str})
                 if payload.get("status") == "success":
                     results.append({"flag": f, "ok": True, "output": raw})
                     ok_count += 1
@@ -267,6 +280,8 @@ def create_provisioner_bp(cfg):
         verify_output = None
         try:
             verified = _check(stack, tenant, flags)
+            if verified.get("cmd"):
+                commands.append({"label": "Verify (GET)", "cmd": verified["cmd"]})
         except ProvisionerError as exc:
             verify_error = exc.message
             verify_output = exc.output
@@ -289,6 +304,7 @@ def create_provisioner_bp(cfg):
             "verifiedAllMatched": all_match,
             "verifyError": verify_error,
             "verifyOutput": verify_output,
+            "commands": commands,
         }
 
     # --- routes ---

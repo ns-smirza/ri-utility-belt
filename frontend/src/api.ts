@@ -101,6 +101,8 @@ export interface ProvCheckResult {
   feature?: string
   flags?: ProvFlagState[]
   allEnabled?: boolean
+  /** Exact kubectl exec command that was run (shell-joined, kubeconfig path inline). */
+  cmd?: string
 }
 
 export interface ProvSetResultItem {
@@ -124,6 +126,8 @@ export interface ProvSetResult {
   verifyError?: string
   verifyOutput?: string
   message?: string
+  /** Exact kubectl exec commands that were run (POST per flag + verify GET). */
+  commands?: { label: string; cmd: string }[]
 }
 
 export async function fetchProvStacks(): Promise<ProvStack[]> {

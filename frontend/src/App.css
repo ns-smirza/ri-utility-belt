@@ -484,6 +484,91 @@
   overflow: auto;
 }
 
+/* exact kubectl exec command display + copy button */
+.prov-cmd-details {
+  margin-top: 14px;
+}
+.prov-cmd-details > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent, #2f5fd0);
+  user-select: none;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.prov-cmd-details > summary::-webkit-details-marker {
+  display: none;
+}
+.prov-cmd-details > summary::before {
+  content: '▸';
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.prov-cmd-details[open] > summary::before {
+  transform: rotate(90deg);
+}
+.prov-cmd-details[open] > summary {
+  margin-bottom: 8px;
+}
+.prov-cmd-row {
+  margin-top: 0;
+}
+.prov-cmd-row + .prov-cmd-row {
+  margin-top: 12px;
+}
+.prov-cmd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.prov-cmd-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5b6478;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.prov-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(47, 95, 208, 0.1);
+  color: var(--accent, #2f5fd0);
+  border: 1px solid rgba(47, 95, 208, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.prov-copy-btn:hover {
+  background: rgba(47, 95, 208, 0.18);
+}
+.prov-copy-btn.copied {
+  color: #1a8a4c;
+  border-color: rgba(26, 138, 76, 0.4);
+  background: rgba(26, 138, 76, 0.1);
+}
+.prov-cmd {
+  margin: 0;
+  padding: 10px 12px;
+  background: #0d1426;
+  color: #e6ecff;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* confirm modal */
 .modal-overlay {
   position: fixed;

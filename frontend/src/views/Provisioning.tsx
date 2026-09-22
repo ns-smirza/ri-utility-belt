@@ -357,6 +357,12 @@ function CheckResultPanel({
               )}
             </div>
           )}
+          {result.cmd && (
+            <details className="prov-cmd-details" data-testid="provisioning-check-cmd-details">
+              <summary>Show kubectl exec command</summary>
+              <CopyableCommand cmd={result.cmd} label="Check status (GET)" />
+            </details>
+          )}
         </>
       )}
     </div>
@@ -435,8 +441,113 @@ function SetResultPanel({
               )}
             </div>
           )}
+          {result.commands?.length ? (
+            <details className="prov-cmd-details" data-testid="provisioning-set-cmd-details">
+              <summary>Show kubectl exec commands ({result.commands.length})</summary>
+              {result.commands.map((c) => (
+                <CopyableCommand key={c.cmd} cmd={c.cmd} label={c.label} />
+              ))}
+            </details>
+          ) : null}
         </>
       )}
+    </div>
+  )
+}
+
+function CopyIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="5" y="1.5" width="6" height="3" rx="1" />
+      <path d="M5 3H3.5A1.5 1.5 0 0 0 2 4.5v9A1.5 1.5 0 0 0 3.5 15h9a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 12.5 3H11" />
+    </svg>
+  )
+}
+
+function CheckIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 8.5l3.5 3.5L13 4.5" />
+    </svg>
+  )
+}
+
+function CopyableCommand({ cmd, label }: { cmd: string; label?: string }) {
+  const [copied, setCopied] = useState(false)
+  const onCopy = useCallback(async () => {
+    // navigator.clipboard requires a secure context (HTTPS/localhost); the
+    // dashboard is served over plain HTTP, so fall back to a temporary
+    // textarea + execCommand('copy') when the async API is unavailable.
+    let ok = false
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(cmd)
+        ok = true
+      }
+    } catch {
+      /* fall through to execCommand */
+    }
+    if (!ok) {
+      try {
+        const ta = document.createElement('textarea')
+        ta.value = cmd
+        ta.setAttribute('readonly', '')
+        ta.style.position = 'fixed'
+        ta.style.top = '-1000px'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.select()
+        ta.setSelectionRange(0, ta.value.length)
+        ok = document.execCommand('copy')
+        document.body.removeChild(ta)
+      } catch {
+        /* clipboard unavailable — ignore */
+      }
+    }
+    if (ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    }
+  }, [cmd])
+  return (
+    <div className="prov-cmd-row" data-testid="provisioning-cmd-row">
+      <div className="prov-cmd-head">
+        {label && <span className="prov-cmd-label">{label}</span>}
+        <button
+          type="button"
+          className={`prov-copy-btn${copied ? ' copied' : ''}`}
+          data-testid="provisioning-copy-cmd"
+          onClick={onCopy}
+          title={copied ? 'Copied' : 'Copy command'}
+          aria-label={copied ? 'Copied' : 'Copy command'}
+        >
+          {copied ? <CheckIcon /> : <CopyIcon />}
+          <span>{copied ? 'Copied' : 'Copy'}</span>
+        </button>
+      </div>
+      <pre className="prov-cmd" data-testid="provisioning-cmd">
+        {cmd}
+      </pre>
     </div>
   )
 }
