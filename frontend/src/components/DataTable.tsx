@@ -31,7 +31,7 @@ const COLUMNS: Column[] = [
   { key: 'vpe-content', label: 'Content', kind: 'pkg' },
   { key: 'vpe-geoipdb', label: 'GeoIP DB', kind: 'pkg' },
   { key: 'images', label: 'Pod Images', kind: 'images' },
-  { key: 'rollout', label: 'Pod Rollout History', kind: 'rollout' },
+  { key: 'rollout', label: 'Deployment Age', kind: 'rollout' },
 ]
 
 // Per-column prefix/suffix to strip in the compact (default) view.
@@ -132,31 +132,36 @@ function ImagesCell({ images, query }: { images: ImageInfo[]; query: string }) {
   )
 }
 
+function formatTs(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())} ${pad(
+    d.getUTCHours(),
+  )}:${pad(d.getUTCMinutes())} UTC`
+}
+
 function RolloutCell({ images }: { images: ImageInfo[] }) {
   if (!images || images.length === 0) {
     return <span className="empty-cell">—</span>
   }
-  // Iterate images in the same order as ImagesCell so each rollout line aligns
-  // with its pod-image line. Show the last two revisions: current ← previous.
+  // Iterate images in the same order as ImagesCell so each age line aligns
+  // with its pod-image line. Show how old the current rollout is, in days
+  // (hours when < 1 day); hover shows the full rollout timestamp.
   return (
     <div className="multi-cell">
       {images.map((im, i) => {
         const r = im.rollout
         let content: ReactNode = <span className="empty-cell">—</span>
         let tip: string | undefined
-        if (r) {
-          if (r.previous != null) {
-            content = (
-              <span className="rollout-rev">
-                <span className="rollout-cur">{r.current}</span>
-                <span className="rollout-arrow" aria-hidden="true"> ← </span>
-                <span className="rollout-prev">{r.previous}</span>
-              </span>
-            )
-            tip = `revisions ${r.previous} → ${r.current}`
-          } else {
-            content = <span className="rollout-rev rollout-single">{r.current}</span>
-            tip = `revision ${r.current} (no prior history)`
+        if (r && r.created) {
+          const ageMs = Date.now() - Date.parse(r.created)
+          if (!Number.isNaN(ageMs)) {
+            const days = Math.floor(ageMs / 86_400_000)
+            const hours = Math.max(0, Math.floor(ageMs / 3_600_000))
+            const label = days >= 1 ? `${days}d` : `${hours}h`
+            content = <span className="rollout-rev rollout-age">{label}</span>
+            tip = `Deployed ${formatTs(r.created)}`
           }
         }
         return (

@@ -50,33 +50,85 @@ for kube in *.yaml; do
         done
     done > "$out.img"
 
-  # --- pod rollout history (last 2 revisions) per tracked deployment ---
-  # Derive each deployment name from its pod name (strip the ReplicaSet + pod
-  # hash suffix), look up that deployment's image-base from the pod->image map,
-  # and run `kubectl rollout history` to capture the two highest revisions
-  # (current = highest, previous = second-highest). Only RI images are emitted,
-  # matching the IMG filter above, so the JSON renderer can join on image-base.
-  grep -E "artifactservice|artifactsync|vpe-manager|callhome|alarmmanager|cloudmetricsgenerator|diagnostic" "$out.pods" 2>/dev/null | \
-    grep -v "deprovision" | \
-    awk '{print $1}' | \
-    sed -E 's/-[0-9a-f]{8,12}-[0-9a-z]{4,6}$//' | \
-    sort -u | \
-    while read -r dep; do
+  # --- deployment age (current rollout) per tracked deployment ---
+  # The active ReplicaSet's creationTimestamp is when the currently-running
+  # pod template was rolled out. It is stable across pod restarts — a
+  # crashloop restart resets pod age, but not the ReplicaSet age — so it is
+  # the right signal for "how old is the current deployment". Query every RS
+  # in one call, keep the active one (status.replicas > 0; the newest ts if a
+  # rollout-in-progress has two live), strip the RS hash to get the deployment
+  # name, and look up that deployment's image-base from the pod->image map
+  # (multi-container pods: split the space-joined field and pick the RI image,
+  # same as the IMG loop above). Emit the creationTimestamp keyed by image-base
+  # so the JSON renderer can join on image-base.
+  KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get rs -n risk-insights -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.creationTimestamp}{"\t"}{.status.replicas}{"\n"}{end}' 2>/dev/null > "$out.rs"
+  awk -F '\t' '
+    $3 != "0" && $1 !~ /deprovision/ && $1 ~ /artifactservice|artifactsync|vpe-manager|callhome|alarmmanager|cloudmetricsgenerator|diagnostic/ {
+      sub(/-[0-9a-z]{8,12}$/, "", $1)
+      if (!($1 in ts) || $2 > ts[$1]) ts[$1] = $2
+    }
+    END { for (d in ts) print d "\t" ts[d] }
+  ' "$out.rs" 2>/dev/null | \
+    while IFS=$'\t' read -r dep tstamp; do
       [ -n "$dep" ] || continue
-      # A pod may have several containers (2/2); the map field is space-joined
-      # images, so split on spaces and pick the RI one — same logic as the IMG
-      # loop above — then strip to image-base (no registry path, no :tag).
       imgbase=$(awk -v d="$dep-" -F '\t' 'index($1,d)==1 {print $2; exit}' "$out.map" 2>/dev/null | tr ' ' '\n' | grep -E "risk-insights-(production|release|develop)-docker" | sed 's#.*/##; s/:.*//' | head -1)
       [ -n "$imgbase" ] || continue
-      revs=$(KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" rollout history deployment/"$dep" -n risk-insights 2>/dev/null | awk '$1 ~ /^[0-9]+$/ {print $1}' | sort -n | tail -2)
-      cur=$(printf '%s\n' "$revs" | tail -1)
-      prev=$(printf '%s\n' "$revs" | sed -n '1p')
-      if [ -n "$cur" ] && [ "$cur" != "$prev" ]; then
-        printf "ROLL|%s|%s|%s\n" "$imgbase" "$cur" "$prev"
-      elif [ -n "$cur" ]; then
-        printf "ROLL|%s|%s|\n" "$imgbase" "$cur"
-      fi
+      printf "ROLL|%s|%s\n" "$imgbase" "$tstamp"
     done > "$out.roll"
+  rm -f "$out.rs"
+
+  # --- MP-side services: callhomeservice / logwatcher / logcollector ---------
+  # These live in per-stack namespaces whose SUFFIX is stable
+  # ("--callhomeservice" / "--logwatcher" / "--logcollector"; the prefix varies:
+  # mp-fed1mp--, stg01-mp--, lon3-mp-prod--), not in risk-insights. Every
+  # sub-deployment of a service shares ONE image (callhome / nslogcollector /
+  # logwatcher), so each service yields one dashboard row. Namespaces are
+  # discovered by suffix and queried ONE AT A TIME — cluster-wide `-A` pod/RS
+  # listings exceed GET_TIMEOUT on these large MP clusters (observed: first
+  # `-A` call returns 0 lines). Filtering by namespace (not pod name) also
+  # excludes the RI-side ri-logwatcher pods in risk-insights.
+  KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get ns --no-headers 2>/dev/null | \
+    awk '$1 ~ /--(callhomeservice|logwatcher|logcollector)$/ {print $1}' > "$out.mns"
+
+  : > "$out.mimg"
+  : > "$out.mroll"
+  while read -r mns; do
+    [ -n "$mns" ] || continue
+    # ONE call per namespace carrying name + status + images. Status comes from
+    # status.phase, upgraded to the first waiting reason (CrashLoopBackOff etc.)
+    # when present. (A separate --no-headers table call proved flaky here: a
+    # cold first list in a namespace can exceed GET_TIMEOUT while the follow-up
+    # call succeeds — observed on lon3's logwatcher ns — so don't split this.)
+    KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get pods -n "$mns" -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.phase}{"\t"}{range .status.containerStatuses[*]}{.state.waiting.reason}{" "}{end}{"\t"}{.spec.containers[*].image}{"\n"}{end}' 2>/dev/null | \
+      awk -F '\t' '{ st = $3; sub(/ .*/, "", st); if (st == "") st = $2; print $1 "\t" st "\t" $4 }' > "$out.mpods"
+
+    while IFS=$'\t' read -r mpod mstatus mimages; do
+      [ -n "$mpod" ] || continue
+      printf '%s\n' "$mimages" | \
+        tr ' ' '\n' | \
+        sed 's#.*/##' | \
+        grep -E "^(callhome|nslogcollector|logwatcher):" | \
+        sort -u | \
+        while read -r img; do
+          [ -n "$img" ] && printf "IMG|%s|%s|%s\n" "$img" "$mpod" "$mstatus"
+        done
+    done < "$out.mpods" >> "$out.mimg"
+
+    # Deployment age: newest active ReplicaSet per service image. A service's
+    # sub-deployments (e.g. logcollector-fastforward/-segmenter) can roll at
+    # different times; the row shows the NEWEST rollout age across them, keyed
+    # by shared image-base so the JSON renderer joins it like the RI rows.
+    KUBECONFIG="$kube" kubectl --request-timeout="$GET_TIMEOUT" get rs -n "$mns" -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.metadata.creationTimestamp}{"\t"}{.status.replicas}{"\n"}{end}' 2>/dev/null | \
+      awk -F '\t' '$3 != "0" && $3 != "" {print $1 "\t" $2}' | \
+      while IFS=$'\t' read -r rsname rts; do
+        [ -n "$rsname" ] || continue
+        dep=$(printf '%s' "$rsname" | sed 's/-[0-9a-z]\{8,12\}$//')
+        imgbase=$(awk -v d="$dep-" -F '\t' 'index($1,d)==1 {print $3; exit}' "$out.mpods" 2>/dev/null | tr ' ' '\n' | sed 's#.*/##; s/:.*//' | grep -E "^(callhome|nslogcollector|logwatcher)$" | head -1)
+        [ -n "$imgbase" ] || continue
+        printf "%s\t%s\n" "$imgbase" "$rts"
+      done | \
+      awk -F '\t' '{ if (!($1 in ts) || $2 > ts[$1]) ts[$1] = $2 } END { for (b in ts) printf "ROLL|%s|%s\n", b, ts[b] }' >> "$out.mroll"
+  done < "$out.mns"
 
   # --- internal packages, per category, newest-first (GNU sort -V inside the pod) ---
   art_pod=$(awk '$3 == "Running" && $1 ~ /^artifactservice-/ {print $1; exit}' "$out.pods" 2>/dev/null)
@@ -109,10 +161,12 @@ for kube in *.yaml; do
   {
     echo "STACK|$kube"
     cat "$out.img"
+    [ -f "$out.mimg" ] && cat "$out.mimg"
     [ -f "$out.roll" ] && cat "$out.roll"
+    [ -f "$out.mroll" ] && cat "$out.mroll"
     [ -f "$out.pkg" ] && cat "$out.pkg"
   } > "$out"
-  rm -f "$out.img" "$out.roll" "$out.pkg" "$out.pods" "$out.map"
+  rm -f "$out.img" "$out.roll" "$out.pkg" "$out.pods" "$out.map" "$out.mns" "$out.mpods" "$out.mmap" "$out.mimg" "$out.mroll"
 ) &
 done
 wait
@@ -127,7 +181,7 @@ if [ "$json" -eq 1 ]; then
     | reduce $rows[] as $r ({cur:null, recs:[]};
         (if $r[0]=="STACK" then .cur = $r[1] else . end)
         | (if $r[0]=="IMG" and .cur != null then .recs += [[.cur, "IMG", $r[1], $r[2], $r[3]]] else . end)
-        | (if $r[0]=="ROLL" and .cur != null then .recs += [[.cur, "ROLL", $r[1], $r[2], $r[3]]] else . end)
+        | (if $r[0]=="ROLL" and .cur != null then .recs += [[.cur, "ROLL", $r[1], $r[2]]] else . end)
         | (if $r[0]=="PKG" and .cur != null then .recs += [[.cur, "PKG", $r[1], $r[2]]] else . end))
     | .recs
     | sort_by(.[0])
@@ -136,7 +190,7 @@ if [ "$json" -eq 1 ]; then
         name: .[0][0],
         images: (
           (map(select(.[1]=="ROLL"))
-            | map({(.[2]): {current: (.[3] | tonumber), previous: (try (.[4] | tonumber) catch null)}})
+            | map({(.[2]): {created: .[3]}})
             | add // {}) as $roll
           |
           map(select(.[1]=="IMG") | .[2:])

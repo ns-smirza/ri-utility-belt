@@ -20,15 +20,23 @@ adding a new utility is a one-line entry in the view registry (see
 Per-Rancher-cluster view of the running **pod images** and the **internal packages**
 shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
 
-- Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images, Pod Rollout History.
+- Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images, Deployment Age.
 - **Pod Images** column shows one running replica per service with a green dot; a red dot
   (with status tooltip: `Running`, `CrashLoopBackOff`, `Terminating`, …) appears only when
   a service has **no** running replica. Gathers `artifactservice`, `artifactsync`,
-  `vpe-manager`, `callhome`, `alarmmanager`, `cloudmetricsgenerator`, and `diagnostic` pods.
-- **Pod Rollout History** column shows the last two `kubectl rollout history` revisions
-  per deployment (`current ← previous`, e.g. `226 ← 225`), aligned line-for-line with the
-  Pod Images column. A single-revision deployment shows just the current revision; `—`
-  when no history is available.
+  `vpe-manager`, `callhome`, `alarmmanager`, `cloudmetricsgenerator`, and `diagnostic` pods
+  from `risk-insights`, plus the MP-side `callhomeservice`, `logwatcher`, and
+  `logcollector` services from their per-stack `--callhomeservice` / `--logwatcher` /
+  `--logcollector` namespaces (each shown as one row from its shared image).
+- **Deployment Age** column shows how old each deployment's current rollout is, in days
+  (hours when under a day, e.g. `27d` or `5h`), aligned line-for-line with the Pod Images
+  column. The age is the active ReplicaSet's creation timestamp — when the currently-running
+  pod template went live — which is stable across pod restarts (a crashloop restart resets
+  pod age but not the deployment age). For the MP-side services, whose sub-deployments
+  (e.g. `logcollector-fastforward` / `-segmenter`) share one image but can roll at
+  different times, the row shows the **newest** rollout age across them. Hover shows the
+  full rollout timestamp (e.g. `Deployed 2026-08-01 00:16 UTC`); `—` when no ReplicaSet
+  is available.
 - Compact/Full toggle (click the title): compact strips prefixes/suffixes
   (e.g. `NSKVM-1.1.36.zip` → `1.1.36`); full shows the raw strings.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.
@@ -50,6 +58,11 @@ into the cluster's `callhomeservice-callhome` pod and curl-ing the in-cluster
   - **Custom** — type any comma-separated flag names.
 - Confirm dialog before any Enable/Disable (state-changing). No auth (internal tool).
 - Per-flag set results + verification (re-read after write); raw failure output shown on error.
+- **Exact command display** — after Check status / Enable / Disable, the result panel shows the
+  exact `kubectl exec` command that ran (shell-joined, with the `--kubeconfig` path inline and the
+  real pod name), each with a copy-to-clipboard icon button. Check shows the GET; Enable/Disable
+  show one POST per flag plus the verify GET. (Surfaced only for commands that executed
+  successfully; discovery-step kubectl calls are not shown.)
 
 ### 3. Tenant ID Finder 🔍
 Look up a tenant ID by org name or domain substring on a chosen stack by `kubectl exec`-ing

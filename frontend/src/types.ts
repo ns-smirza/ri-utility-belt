@@ -6,8 +6,8 @@ export interface PodInfo {
 }
 
 export interface RolloutInfo {
-  current: number
-  previous?: number | null
+  /** ISO creationTimestamp of the active ReplicaSet = when the current rollout went live. */
+  created: string
 }
 
 export interface ImageInfo {
@@ -15,7 +15,7 @@ export interface ImageInfo {
   running: boolean
   status: string
   pods: PodInfo[]
-  /** Last two deployment revisions (current + previous), if available. */
+  /** Age of the current deployment (active ReplicaSet creation timestamp), if available. */
   rollout?: RolloutInfo | null
 }
 
