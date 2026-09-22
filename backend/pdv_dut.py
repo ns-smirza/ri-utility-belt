@@ -193,6 +193,7 @@ def _fetch_version(ip):
     hostname = ""
     sent_cmd = False
     sent_exit = False
+    sent_at = 0  # len(joined) when we sent `show version-info`
     deadline = time.time() + SSH_TIMEOUT
 
     def _send(data):
@@ -224,16 +225,33 @@ def _fetch_version(ip):
                     if hm:
                         hostname = hm.group(1)
             # Wait for the first prompt (banner fully printed) before sending
-            # the command — avoids the newer-build startup-stdin-drop.
+            # the command — avoids the newer-build startup-stdin-drop. The
+            # "Netskope Appliance" banner check is a deliberate guard: it
+            # confirms the box is a PDV DUT *appliance*. A reassigned IP that
+            # now hosts a different Netskope VPE prints "Netskope VPE" here, so
+            # the guard correctly refuses to query it as a DUT (the failure
+            # surfaces as "no version-info from <ip>" below).
             if (
                 not sent_cmd
                 and "Netskope Appliance" in joined
                 and _PROMPT_TAIL_RE.search(joined)
             ):
                 sent_cmd = True
+                sent_at = len(joined)
                 _send(b"show version-info\n")
-            # Once we have every field, send `exit` and stop reading.
-            if sent_cmd and len(versions) >= len(FIELDS) and not sent_exit:
+            # Exit once the command has finished — either we collected every
+            # field, or (for builds that omit some fields, e.g. rollback/
+            # urldb "Not installed") the nsshell prompt re-appears after the
+            # command output. `sent_at` guards against re-matching the
+            # pre-command prompt we sent at.
+            prompt_returned = (
+                sent_cmd
+                and len(joined) > sent_at + 2
+                and _PROMPT_TAIL_RE.search(joined)
+            )
+            if sent_cmd and not sent_exit and (
+                len(versions) >= len(FIELDS) or prompt_returned
+            ):
                 sent_exit = True
                 _send(b"exit\n")
                 time.sleep(0.4)
