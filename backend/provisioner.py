@@ -10,6 +10,7 @@ A "feature" is a named group of one or more flags. Currently:
   - vpe-ui        : nplan5663_vpe_setting_enabled
   - ai-guardrails : nplan5283_ai_security, nplan5663_vpe_setting_enabled,
                     nplan6445_aiguardrails_vpe
+  - swg           : eng1209377_swg_vpe
 
 Registered by app.py via create_provisioner_bp(cfg); cfg provides
 RANCHER_DIR, RUN_ENV, DISPLAY_NAMES, NPE_RE.
@@ -46,6 +47,12 @@ FEATURES = [
             "nplan5663_vpe_setting_enabled",
             "nplan6445_aiguardrails_vpe",
         ],
+    },
+    {
+        "key": "swg",
+        "label": "SWG",
+        "description": "SWG on VPE",
+        "flags": ["eng1209377_swg_vpe"],
     },
 ]
 
