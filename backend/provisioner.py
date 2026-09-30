@@ -12,6 +12,7 @@ A "feature" is a named group of one or more flags. Currently:
                     nplan6445_aiguardrails_vpe
   - swg           : eng1209377_swg_vpe
   - said          : nplan6966_aicc_ebpf_client
+  - risk-insights : eng1172719_riskinsights_vpe
 
 Registered by app.py via create_provisioner_bp(cfg); cfg provides
 RANCHER_DIR, RUN_ENV, DISPLAY_NAMES, NPE_RE.
@@ -60,6 +61,12 @@ FEATURES = [
         "label": "SAID",
         "description": "SAID on VPE",
         "flags": ["nplan6966_aicc_ebpf_client"],
+    },
+    {
+        "key": "risk-insights",
+        "label": "Risk Insights",
+        "description": "Risk Insights on VPE",
+        "flags": ["eng1172719_riskinsights_vpe"],
     },
 ]
 
