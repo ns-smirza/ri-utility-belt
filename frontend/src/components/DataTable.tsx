@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, type Ref } from 'react'
+import { Fragment, type ClipboardEvent, type ReactNode, type Ref } from 'react'
 import type { ImageInfo, Stack } from '../types'
 
 interface Props {
@@ -174,9 +174,41 @@ function RolloutCell({ images }: { images: ImageInfo[] }) {
   )
 }
 
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+// Chrome's default copy emits each .cell-line as a <div> with its computed
+// style inlined — and pod lines carry `display:flex`, which rich-text
+// composers like Slack's treat as inline content, collapsing the whole
+// selection onto one line. Override the clipboard for selections touching a
+// .multi-cell: plain text joined with \n, HTML joined with <br>.
+function handleMultiCellCopy(e: ClipboardEvent<HTMLElement>) {
+  const sel = window.getSelection()
+  if (!sel || sel.isCollapsed || !e.clipboardData) return
+  const lines: string[] = []
+  e.currentTarget.querySelectorAll('.multi-cell').forEach((cell) => {
+    if (!sel.containsNode(cell, true)) return
+    cell.querySelectorAll('.cell-line').forEach((el) => {
+      if (sel.containsNode(el, true)) {
+        // Skip hidden affordances (status dot + tooltip) — textContent would
+        // otherwise leak tooltip text like "Running" into the copy.
+        const clone = el.cloneNode(true) as HTMLElement
+        clone.querySelectorAll('.pod-dot-wrap, .pod-tip').forEach((n) => n.remove())
+        const t = (clone.textContent ?? '').trim()
+        if (t) lines.push(t)
+      }
+    })
+  })
+  if (lines.length < 2) return
+  e.preventDefault()
+  e.clipboardData.setData('text/plain', lines.join('\n'))
+  e.clipboardData.setData('text/html', lines.map(escapeHtml).join('<br>'))
+}
+
 export function DataTable({ stacks, refreshing, query, fullVersions, tableRef, scrollRef }: Props) {
   return (
-    <div className="table-card" data-testid="table-card">
+    <div className="table-card" data-testid="table-card" onCopy={handleMultiCellCopy}>
       {refreshing && (
         <div className="gathering-overlay" data-testid="gathering-overlay">
           <span className="spinner spinner-dark" aria-hidden="true" />
