@@ -11,7 +11,7 @@ interface Props {
 }
 
 type ColKind = 'stack' | 'env' | 'images' | 'rollout' | 'pkg'
-interface Column {
+export interface Column {
   key: string
   label: string
   kind: ColKind
@@ -19,7 +19,7 @@ interface Column {
 
 // Ordered columns with display labels. Package keys match the categories
 // emitted by stacks_build_version.sh (vsp-ais / vsp-said, not vpe-*).
-const COLUMNS: Column[] = [
+export const COLUMNS: Column[] = [
   { key: 'stack', label: 'Stack', kind: 'stack' },
   { key: 'env', label: 'Env', kind: 'env' },
   { key: 'vpe-sf', label: 'Platform', kind: 'pkg' },
@@ -46,7 +46,7 @@ const STRIP: Record<string, { prefix?: string; suffix?: string }> = {
   'vpe-geoipdb': { prefix: 'vpe-upgrade-geoipdb-', suffix: '.pkg' },
 }
 
-function stripVersion(value: string, key: string): string {
+export function stripVersion(value: string, key: string): string {
   const s = STRIP[key]
   if (!s) return value
   let out = value
@@ -183,7 +183,7 @@ function escapeHtml(s: string): string {
 // composers like Slack's treat as inline content, collapsing the whole
 // selection onto one line. Override the clipboard for selections touching a
 // .multi-cell: plain text joined with \n, HTML joined with <br>.
-function handleMultiCellCopy(e: ClipboardEvent<HTMLElement>) {
+export function handleMultiCellCopy(e: ClipboardEvent<HTMLElement>) {
   const sel = window.getSelection()
   if (!sel || sel.isCollapsed || !e.clipboardData) return
   const lines: string[] = []

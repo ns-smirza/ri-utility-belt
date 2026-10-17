@@ -2130,3 +2130,109 @@
   padding: 28px;
 }
 
+
+/* ---- Compare view ---- */
+.compare-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 48px 24px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.compare-empty p {
+  margin: 0;
+}
+.compare-add {
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.14s ease;
+}
+.compare-add:hover {
+  background: #d8e4ff;
+}
+.compare-col-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.compare-col-head select {
+  flex: 1;
+  min-width: 120px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.compare-col-head select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.compare-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.compare-remove:hover {
+  background: var(--prod-soft);
+  color: var(--prod);
+}
+.compare-field-col,
+.compare-field {
+  text-align: left;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+}
+.compare-field-img {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding-left: 22px;
+}
+.compare-group td {
+  background: var(--card-alt);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-top: 1px solid var(--border);
+}
+.compare-add-col {
+  background: transparent;
+  border-left: none;
+  min-width: 90px;
+}
+.compare-img-tag {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: #2a3450;
+}
+.compare-age {
+  margin-left: 6px;
+}
+/* Row where the picked stacks disagree */
+.compare-table td.diff-cell {
+  background: #fdf3dd;
+  box-shadow: inset 0 0 0 1px rgba(240, 160, 32, 0.35);
+}

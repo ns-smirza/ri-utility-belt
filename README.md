@@ -39,6 +39,12 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   is available.
 - Compact/Full toggle (click the title): compact strips prefixes/suffixes
   (e.g. `NSKVM-1.1.36.zip` → `1.1.36`); full shows the raw strings.
+- **Compare view** (Table | Compare toggle in the header): transposed table for
+  side-by-side stack comparison. Add up to 5 stack columns (each a dropdown);
+  rows are Env, every package, and **one row per pod image** (union across the
+  picked stacks, each cell showing that stack's image tag, running-status dot,
+  and rollout age). Rows where the picked stacks disagree are highlighted amber.
+  Picked stacks persist in `localStorage`. Pure frontend — reuses `/api/data`.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.
 - Search across stack names + version strings (with match highlighting).
 - **Snapshot** button copies the full table (all columns/rows, including off-screen) to the

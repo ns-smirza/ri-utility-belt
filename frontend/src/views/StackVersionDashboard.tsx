@@ -6,6 +6,7 @@ import { Tabs, type TabKey } from '../components/Tabs'
 import { RefreshButton } from '../components/RefreshButton'
 import { StatusLabels } from '../components/StatusLabels'
 import { DataTable } from '../components/DataTable'
+import { CompareView } from '../components/CompareView'
 import { SearchBar } from '../components/SearchBar'
 import { SnapshotButton } from '../components/SnapshotButton'
 
@@ -30,6 +31,7 @@ export function StackVersionDashboard() {
   const [tab, setTab] = useState<TabKey>('all')
   const [query, setQuery] = useState('')
   const [fullVersions, setFullVersions] = useState(false)
+  const [viewMode, setViewMode] = useState<'table' | 'compare'>('table')
   const [now, setNow] = useState<number>(() => Date.now())
   // manualRefresh = a refresh the user explicitly triggered (show progress UI).
   // Background/scheduled refreshes swap data silently — no progress UI.
@@ -174,9 +176,33 @@ export function StackVersionDashboard() {
           <p className="subtitle">Image &amp; package versions across Rancher clusters · click title to toggle</p>
         </div>
         <div className="actions">
-          <Tabs tab={tab} onChange={setTab} />
-          <SearchBar value={query} onChange={setQuery} />
-          <SnapshotButton onSnapshot={onSnapshot} disabled={filtered.length === 0} />
+          <div className="tabs" data-testid="view-toggle" role="tablist">
+            <button
+              role="tab"
+              aria-selected={viewMode === 'table'}
+              className={`tab${viewMode === 'table' ? ' tab-active' : ''}`}
+              data-testid="view-table"
+              onClick={() => setViewMode('table')}
+            >
+              Table
+            </button>
+            <button
+              role="tab"
+              aria-selected={viewMode === 'compare'}
+              className={`tab${viewMode === 'compare' ? ' tab-active' : ''}`}
+              data-testid="view-compare"
+              onClick={() => setViewMode('compare')}
+            >
+              Compare
+            </button>
+          </div>
+          {viewMode === 'table' && (
+            <>
+              <Tabs tab={tab} onChange={setTab} />
+              <SearchBar value={query} onChange={setQuery} />
+              <SnapshotButton onSnapshot={onSnapshot} disabled={filtered.length === 0} />
+            </>
+          )}
           <RefreshButton onRefresh={onRefresh} refreshing={manualRefresh} />
         </div>
       </header>
@@ -188,21 +214,29 @@ export function StackVersionDashboard() {
         now={now}
       />
 
-      {query.trim() && (
+      {viewMode === 'table' && query.trim() && (
         <div className="results-count" data-testid="results-count">
           Showing {filtered.length} of {totalInTab} stack{totalInTab === 1 ? '' : 's'}
         </div>
       )}
 
       <main className="view-main">
-        <DataTable
-          stacks={filtered}
-          refreshing={showRefreshing}
-          query={query}
-          fullVersions={fullVersions}
-          tableRef={tableRef}
-          scrollRef={scrollRef}
-        />
+        {viewMode === 'table' ? (
+          <DataTable
+            stacks={filtered}
+            refreshing={showRefreshing}
+            query={query}
+            fullVersions={fullVersions}
+            tableRef={tableRef}
+            scrollRef={scrollRef}
+          />
+        ) : (
+          <CompareView
+            stacks={data?.stacks ?? []}
+            refreshing={showRefreshing}
+            fullVersions={fullVersions}
+          />
+        )}
       </main>
 
       <footer className="view-footer" data-testid="footer">
