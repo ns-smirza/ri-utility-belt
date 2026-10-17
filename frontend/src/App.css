@@ -2236,3 +2236,82 @@
   background: #fdf3dd;
   box-shadow: inset 0 0 0 1px rgba(240, 160, 32, 0.35);
 }
+
+/* Compare view — row visibility dropdown */
+.compare-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 10px 14px 0;
+}
+.rows-dropdown {
+  position: relative;
+}
+.rows-toggle {
+  border: 1px solid var(--border);
+  background: var(--card-alt);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.rows-toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.rows-badge {
+  display: inline-block;
+  background: var(--warn);
+  color: #fff;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 1px 7px;
+  margin-left: 7px;
+}
+.rows-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  min-width: 230px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.rows-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.rows-item:hover {
+  background: var(--card-alt);
+}
+.rows-item input {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.rows-item-img {
+  padding-left: 24px;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+.rows-section {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 8px 8px 3px;
+}

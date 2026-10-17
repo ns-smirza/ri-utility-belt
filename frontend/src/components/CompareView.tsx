@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Stack } from '../types'
 import { COLUMNS, handleMultiCellCopy, stripVersion } from './DataTable'
 
 const MAX_STACKS = 5
 const LS_KEY = 'compare-stacks'
+const LS_ROWS_KEY = 'compare-hidden-rows'
 
 const PKG_ROWS = COLUMNS.filter((c) => c.kind === 'pkg')
 
@@ -24,6 +25,26 @@ function saveSlots(slots: (string | null)[]) {
     localStorage.setItem(LS_KEY, JSON.stringify(slots.filter((s) => s !== null)))
   } catch {
     /* storage unavailable (private window etc.) — non-fatal */
+  }
+}
+
+function loadHiddenRows(): string[] {
+  try {
+    const raw = localStorage.getItem(LS_ROWS_KEY)
+    if (!raw) return []
+    const arr: unknown = JSON.parse(raw)
+    if (!Array.isArray(arr)) return []
+    return arr.filter((x): x is string => typeof x === 'string')
+  } catch {
+    return []
+  }
+}
+
+function saveHiddenRows(rows: string[]) {
+  try {
+    localStorage.setItem(LS_ROWS_KEY, JSON.stringify(rows))
+  } catch {
+    /* storage unavailable — non-fatal */
   }
 }
 
@@ -58,10 +79,31 @@ interface Props {
 // backend involvement.
 export function CompareView({ stacks, refreshing, fullVersions }: Props) {
   const [slots, setSlots] = useState<(string | null)[]>(loadSaved)
+  const [hiddenRows, setHiddenRows] = useState<string[]>(loadHiddenRows)
+  const [rowsOpen, setRowsOpen] = useState(false)
+  const rowsRef = useRef<HTMLDivElement | null>(null)
 
   const byName = useMemo(() => new Map(stacks.map((s) => [s.name, s])), [stacks])
 
   useEffect(() => saveSlots(slots), [slots])
+  useEffect(() => saveHiddenRows(hiddenRows), [hiddenRows])
+
+  // Close the rows dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!rowsOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (rowsRef.current && !rowsRef.current.contains(e.target as Node)) setRowsOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setRowsOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [rowsOpen])
 
   // Drop saved slots whose stack no longer exists (once data has arrived).
   useEffect(() => {
@@ -90,6 +132,21 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
   // A row "differs" when the picked stacks don't all have the same value.
   const differs = (values: string[]) => new Set(values).size > 1
 
+  // Row visibility filter: every row header gets a checkbox (all on by
+  // default). Row keys: 'env', package keys, and `img:<name>` per pod image.
+  const hidden = new Set(hiddenRows)
+  const visible = (key: string) => !hidden.has(key)
+  const toggleRow = (key: string) =>
+    setHiddenRows((cur) => (cur.includes(key) ? cur.filter((k) => k !== key) : [...cur, key]))
+
+  const rowItems: { key: string; label: string; group: boolean }[] = [
+    { key: 'env', label: 'Env', group: false },
+    ...PKG_ROWS.map((c) => ({ key: c.key, label: c.label, group: false })),
+    ...imageNames.map((n) => ({ key: `img:${n}`, label: n, group: true })),
+  ]
+  const visiblePkgRows = PKG_ROWS.filter((c) => visible(c.key))
+  const visibleImageNames = imageNames.filter((n) => visible(`img:${n}`))
+
   const pkgValue = (s: Stack | undefined, key: string): { display: string[]; cmp: string } => {
     if (!s) return { display: [], cmp: '' }
     const raw = s.packages[key] ?? []
@@ -116,6 +173,39 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
           Gathering data…
         </div>
       )}
+      <div className="compare-toolbar">
+        <div className="rows-dropdown" ref={rowsRef}>
+          <button
+            className="rows-toggle"
+            data-testid="compare-rows-toggle"
+            aria-expanded={rowsOpen}
+            onClick={() => setRowsOpen((o) => !o)}
+          >
+            Rows ▾
+            {hiddenRows.length > 0 && <span className="rows-badge">{hiddenRows.length}</span>}
+          </button>
+          {rowsOpen && (
+            <div className="rows-panel" data-testid="compare-rows-panel" role="menu">
+              {rowItems.map((r, idx) => (
+                <div key={r.key}>
+                  {r.group && (idx === 0 || !rowItems[idx - 1].group) && (
+                    <div className="rows-section">Pod Images</div>
+                  )}
+                  <label className={`rows-item${r.group ? ' rows-item-img' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={!hidden.has(r.key)}
+                      onChange={() => toggleRow(r.key)}
+                      data-testid={`compare-rowcheck-${r.key}`}
+                    />
+                    <span>{r.label}</span>
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
       <div className="table-scroll">
         <table className="data-table compare-table" data-testid="compare-table">
           <thead>
@@ -164,26 +254,28 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
           </thead>
           <tbody>
             {/* Env */}
-            <tr data-testid="compare-row-env">
-              <td className="compare-field">Env</td>
-              {picked.map((s, i) => {
-                const values = picked.map((p) => p?.env ?? '')
-                const diff = pickedStacks.length > 1 && differs(values)
-                return (
-                  <td key={i} className={diff ? 'diff-cell' : ''}>
-                    {s ? (
-                      <span className={`env-badge env-${s.env}`}>{s.env}</span>
-                    ) : (
-                      <span className="empty-cell">—</span>
-                    )}
-                  </td>
-                )
-              })}
-              {slots.length < MAX_STACKS && <td className="compare-add-col" />}
-            </tr>
+            {visible('env') && (
+              <tr data-testid="compare-row-env">
+                <td className="compare-field">Env</td>
+                {picked.map((s, i) => {
+                  const values = picked.map((p) => p?.env ?? '')
+                  const diff = pickedStacks.length > 1 && differs(values)
+                  return (
+                    <td key={i} className={diff ? 'diff-cell' : ''}>
+                      {s ? (
+                        <span className={`env-badge env-${s.env}`}>{s.env}</span>
+                      ) : (
+                        <span className="empty-cell">—</span>
+                      )}
+                    </td>
+                  )
+                })}
+                {slots.length < MAX_STACKS && <td className="compare-add-col" />}
+              </tr>
+            )}
 
             {/* Packages */}
-            {PKG_ROWS.map((c) => {
+            {visiblePkgRows.map((c) => {
               const vals = picked.map((s) => pkgValue(s, c.key))
               const diff = pickedStacks.length > 1 && differs(vals.map((v) => v.cmp))
               return (
@@ -210,14 +302,14 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
             })}
 
             {/* Pod images — one row per image name */}
-            {imageNames.length > 0 && (
+            {visibleImageNames.length > 0 && (
               <tr className="compare-group" data-testid="compare-group-images">
                 <td colSpan={slots.length + (slots.length < MAX_STACKS ? 2 : 1)}>
                   Pod Images
                 </td>
               </tr>
             )}
-            {imageNames.map((name) => {
+            {visibleImageNames.map((name) => {
               const imgs = picked.map((s) => s?.images.find((im) => imageName(im.image) === name))
               const diff =
                 pickedStacks.length > 1 &&
