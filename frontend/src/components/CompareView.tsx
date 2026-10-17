@@ -132,13 +132,9 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
   }
 
   return (
-    <div className="table-card" data-testid="compare-root" onCopy={handleMultiCellCopy}>
-      {refreshing && (
-        <div className="gathering-overlay" data-testid="gathering-overlay">
-          <span className="spinner spinner-dark" aria-hidden="true" />
-          Gathering data…
-        </div>
-      )}
+    <div className="compare-wrap" data-testid="compare-root" onCopy={handleMultiCellCopy}>
+      {/* Toolbar lives OUTSIDE .table-card: the card has overflow:hidden, which
+          would clip the rows dropdown panel at the card's bottom edge. */}
       <div className="compare-toolbar">
         <div className="rows-dropdown" ref={rowsRef}>
           <button
@@ -186,7 +182,14 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
           )}
         </div>
       </div>
-      <div className="table-scroll">
+      <div className="table-card">
+        {refreshing && (
+          <div className="gathering-overlay" data-testid="gathering-overlay">
+            <span className="spinner spinner-dark" aria-hidden="true" />
+            Gathering data…
+          </div>
+        )}
+        <div className="table-scroll">
         <table className="data-table compare-table" data-testid="compare-table">
           <thead>
             <tr>
@@ -328,6 +331,7 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
             })}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   )

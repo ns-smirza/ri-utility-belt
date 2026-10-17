@@ -2241,7 +2241,7 @@
 .compare-toolbar {
   display: flex;
   justify-content: flex-end;
-  padding: 10px 14px 0;
+  margin-bottom: 8px;
 }
 .rows-dropdown {
   position: relative;
