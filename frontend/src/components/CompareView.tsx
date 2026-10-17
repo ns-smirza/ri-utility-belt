@@ -152,6 +152,20 @@ export function CompareView({ stacks, refreshing, fullVersions }: Props) {
           </button>
           {rowsOpen && (
             <div className="rows-panel" data-testid="compare-rows-panel" role="menu">
+              {(() => {
+                const allVisible = rowItems.every((r) => !hidden.has(r.key))
+                return (
+                  <button
+                    className={`rows-all${allVisible ? '' : ' rows-all-select'}`}
+                    data-testid="compare-rows-toggle-all"
+                    onClick={() =>
+                      setHiddenRows(allVisible ? rowItems.map((r) => r.key) : [])
+                    }
+                  >
+                    {allVisible ? 'Deselect All' : 'Select All'}
+                  </button>
+                )
+              })()}
               {rowItems.map((r, idx) => (
                 <div key={r.key}>
                   {r.group && (idx === 0 || !rowItems[idx - 1].group) && (
