@@ -3,50 +3,8 @@ import type { Stack } from '../types'
 import { COLUMNS, handleMultiCellCopy, stripVersion } from './DataTable'
 
 const MAX_STACKS = 5
-const LS_KEY = 'compare-stacks'
-const LS_ROWS_KEY = 'compare-hidden-rows'
 
 const PKG_ROWS = COLUMNS.filter((c) => c.kind === 'pkg')
-
-function loadSaved(): (string | null)[] {
-  try {
-    const raw = localStorage.getItem(LS_KEY)
-    if (!raw) return []
-    const arr: unknown = JSON.parse(raw)
-    if (!Array.isArray(arr)) return []
-    return arr.filter((x): x is string => typeof x === 'string')
-  } catch {
-    return []
-  }
-}
-
-function saveSlots(slots: (string | null)[]) {
-  try {
-    localStorage.setItem(LS_KEY, JSON.stringify(slots.filter((s) => s !== null)))
-  } catch {
-    /* storage unavailable (private window etc.) — non-fatal */
-  }
-}
-
-function loadHiddenRows(): string[] {
-  try {
-    const raw = localStorage.getItem(LS_ROWS_KEY)
-    if (!raw) return []
-    const arr: unknown = JSON.parse(raw)
-    if (!Array.isArray(arr)) return []
-    return arr.filter((x): x is string => typeof x === 'string')
-  } catch {
-    return []
-  }
-}
-
-function saveHiddenRows(rows: string[]) {
-  try {
-    localStorage.setItem(LS_ROWS_KEY, JSON.stringify(rows))
-  } catch {
-    /* storage unavailable — non-fatal */
-  }
-}
 
 function imageName(image: string): string {
   const i = image.lastIndexOf(':')
@@ -78,15 +36,23 @@ interface Props {
 // disagree get a subtle highlight. Reuses the same /api/data payload — no
 // backend involvement.
 export function CompareView({ stacks, refreshing, fullVersions }: Props) {
-  const [slots, setSlots] = useState<(string | null)[]>(loadSaved)
-  const [hiddenRows, setHiddenRows] = useState<string[]>(loadHiddenRows)
+  // Session-only state by design: stack picks and row filters reset on reload.
+  const [slots, setSlots] = useState<(string | null)[]>([])
+  const [hiddenRows, setHiddenRows] = useState<string[]>([])
   const [rowsOpen, setRowsOpen] = useState(false)
   const rowsRef = useRef<HTMLDivElement | null>(null)
 
   const byName = useMemo(() => new Map(stacks.map((s) => [s.name, s])), [stacks])
 
-  useEffect(() => saveSlots(slots), [slots])
-  useEffect(() => saveHiddenRows(hiddenRows), [hiddenRows])
+  // Remove keys left behind by the earlier localStorage-persistent version.
+  useEffect(() => {
+    try {
+      localStorage.removeItem('compare-stacks')
+      localStorage.removeItem('compare-hidden-rows')
+    } catch {
+      /* storage unavailable — non-fatal */
+    }
+  }, [])
 
   // Close the rows dropdown on outside click / Escape.
   useEffect(() => {

@@ -45,8 +45,8 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   picked stacks, each cell showing that stack's image tag, running-status dot,
   and rollout age). Rows where the picked stacks disagree are highlighted amber.
   A **Rows ▾** dropdown above the table lists every row header with a checkbox
-  (all on by default); unchecking hides those rows. Picked stacks and hidden
-  rows persist in `localStorage`. Pure frontend — reuses `/api/data`.
+  (all on by default); unchecking hides those rows. Compare state is
+  session-only — a page reload starts fresh. Pure frontend — reuses `/api/data`.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.
 - Search across stack names + version strings (with match highlighting).
 - **Snapshot** button copies the full table (all columns/rows, including off-screen) to the
