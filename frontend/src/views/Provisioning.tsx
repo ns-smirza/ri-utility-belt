@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchProvFeatures,
   fetchProvStacks,
@@ -9,7 +9,7 @@ import {
   type ProvSetResult,
   type ProvStack,
 } from '../api'
-import { KNOWN_TENANTS } from '../knownTenants'
+import { KNOWN_TENANTS, type KnownTenant } from '../knownTenants'
 
 type Busy = 'check' | 'set' | null
 
@@ -24,6 +24,8 @@ export function Provisioning() {
   const [checkRes, setCheckRes] = useState<ProvCheckResult | null>(null)
   const [setRes, setSetRes] = useState<ProvSetResult | null>(null)
   const [pending, setPending] = useState<'1' | '0' | null>(null)
+  const [tenantOpen, setTenantOpen] = useState(false)
+  const tenantRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     Promise.all([fetchProvStacks(), fetchProvFeatures()])
@@ -37,12 +39,58 @@ export function Provisioning() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Close the tenant dropdown on outside click / Escape.
+  useEffect(() => {
+    if (!tenantOpen) return
+    const onDoc = (e: MouseEvent) => {
+      if (tenantRef.current && !tenantRef.current.contains(e.target as Node)) {
+        setTenantOpen(false)
+      }
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setTenantOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDoc)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [tenantOpen])
+
   const selected = useMemo(() => stacks.find((s) => s.name === stack), [stacks, stack])
   // Matches when the tenant box holds the exact ID of a known tenant (typed or
-  // picked from the datalist).
+  // picked from the dropdown).
   const knownTenant = useMemo(
     () => KNOWN_TENANTS.find((t) => t.id === tenant.trim()),
     [tenant],
+  )
+  // Dropdown filtering matches ID, hostname, or stack label. A value that
+  // exactly matches a known tenant's ID is a completed pick, not a search —
+  // show the full list so the user can switch to a different tenant.
+  const filteredTenants = useMemo(() => {
+    const q = tenant.trim().toLowerCase()
+    if (!q || KNOWN_TENANTS.some((t) => t.id === q)) return KNOWN_TENANTS
+    return KNOWN_TENANTS.filter(
+      (t) =>
+        t.id.includes(q) ||
+        t.hostname.toLowerCase().includes(q) ||
+        t.stackDisplay.toLowerCase().includes(q),
+    )
+  }, [tenant])
+
+  const pickTenant = useCallback(
+    (t: KnownTenant) => {
+      setTenant(t.id)
+      // Tenant IDs only exist on their home stack, so follow the pick.
+      if (t.stack !== stack) {
+        setStack(t.stack)
+        setCheckRes(null)
+        setSetRes(null)
+      }
+      setTenantOpen(false)
+    },
+    [stack],
   )
   const parsedCustomFlags = useMemo(
     () =>
@@ -170,43 +218,79 @@ export function Provisioning() {
             </select>
           </label>
 
-          <label className="prov-field">
-            <span className="prov-label">Tenant ID</span>
-            {/* Free-text ID or pick a known tenant from the datalist (typing
-                filters by hostname too). Picking a known tenant auto-selects
-                its home stack, since tenant IDs only exist there. */}
-            <input
-              className="prov-input"
-              data-testid="provisioning-tenant-input"
-              type="text"
-              inputMode="numeric"
-              placeholder="e.g. 18320"
-              list="prov-tenant-list"
-              value={tenant}
-              onChange={(e) => {
-                const v = e.target.value
-                setTenant(v)
-                const m = KNOWN_TENANTS.find((t) => t.id === v.trim())
-                if (m && m.stack !== stack) {
-                  setStack(m.stack)
-                  setCheckRes(null)
-                  setSetRes(null)
-                }
-              }}
-            />
-            <datalist id="prov-tenant-list" data-testid="provisioning-tenant-list">
-              {KNOWN_TENANTS.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.hostname} · {t.stackDisplay}
-                </option>
-              ))}
-            </datalist>
+          <div className="prov-field">
+            <label className="prov-label" htmlFor="prov-tenant-input">
+              Tenant ID
+            </label>
+            {/* Free-text ID or pick a known tenant from the dropdown (typing
+                filters by ID, hostname, or stack). Custom dropdown rather than
+                a native datalist: Chrome suppresses datalist suggestions when
+                the value exactly matches an option, so the list "disappeared"
+                after picking a tenant. */}
+            <div className="tenant-combo" ref={tenantRef}>
+              <input
+                id="prov-tenant-input"
+                className="prov-input"
+                data-testid="provisioning-tenant-input"
+                type="text"
+                inputMode="numeric"
+                placeholder="e.g. 18320"
+                autoComplete="off"
+                value={tenant}
+                onFocus={() => setTenantOpen(true)}
+                onChange={(e) => {
+                  const v = e.target.value
+                  setTenant(v)
+                  setTenantOpen(true)
+                  const m = KNOWN_TENANTS.find((t) => t.id === v.trim())
+                  if (m && m.stack !== stack) {
+                    setStack(m.stack)
+                    setCheckRes(null)
+                    setSetRes(null)
+                  }
+                }}
+              />
+              <button
+                type="button"
+                className="tenant-combo-toggle"
+                data-testid="provisioning-tenant-toggle"
+                aria-label="Show known tenants"
+                aria-expanded={tenantOpen}
+                onClick={() => setTenantOpen((o) => !o)}
+              >
+                ▾
+              </button>
+              {tenantOpen && (
+                <div className="tenant-panel" data-testid="provisioning-tenant-panel">
+                  {filteredTenants.length === 0 ? (
+                    <div className="tenant-empty" data-testid="provisioning-tenant-empty">
+                      No known tenant matches “{tenant.trim()}”
+                    </div>
+                  ) : (
+                    filteredTenants.map((t) => (
+                      <button
+                        type="button"
+                        key={t.id}
+                        className="tenant-option"
+                        data-testid={`provisioning-tenant-option-${t.id}`}
+                        onClick={() => pickTenant(t)}
+                      >
+                        <span className="tenant-option-host">{t.hostname}</span>
+                        <span className="tenant-option-meta">
+                          {t.stackDisplay} · #{t.id}
+                        </span>
+                      </button>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
             {knownTenant && (
               <span className="prov-tenant-hint" data-testid="provisioning-tenant-hint">
                 {knownTenant.hostname} · {knownTenant.stackDisplay}
               </span>
             )}
-          </label>
+          </div>
 
           <div className="prov-actions">
             <button

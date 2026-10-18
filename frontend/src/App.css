@@ -2349,3 +2349,76 @@
   font-size: 11.5px;
   color: var(--muted);
 }
+
+/* Provisioning — Tenant ID combobox (custom dropdown; a native datalist hides
+   its suggestions whenever the value exactly matches an option) */
+.tenant-combo {
+  position: relative;
+}
+.tenant-combo .prov-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 32px;
+}
+.tenant-combo-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.tenant-combo-toggle:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.tenant-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 40;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  padding: 6px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.tenant-option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.tenant-option:hover {
+  background: var(--card-alt);
+}
+.tenant-option-host {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--text);
+}
+.tenant-option-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+.tenant-empty {
+  padding: 10px 9px;
+  font-size: 12px;
+  color: var(--muted);
+}
