@@ -2381,7 +2381,6 @@
 .tenant-panel {
   position: absolute;
   left: 0;
-  right: 0;
   top: calc(100% + 6px);
   z-index: 40;
   background: var(--card);
@@ -2389,8 +2388,29 @@
   border-radius: 10px;
   box-shadow: var(--shadow);
   padding: 6px;
-  max-height: 300px;
+  /* Grow to fit the (long) hostnames so they stay on one line, capped so the
+     panel never runs off the card. */
+  width: max-content;
+  min-width: 100%;
+  max-width: 460px;
+  max-height: 320px;
   overflow-y: auto;
+  box-sizing: border-box;
+}
+.tenant-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 6px 9px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: #fff;
+  outline: none;
+  margin-bottom: 6px;
+}
+.tenant-search:focus {
+  border-color: var(--accent);
 }
 .tenant-option {
   display: flex;
@@ -2398,7 +2418,8 @@
   align-items: flex-start;
   gap: 1px;
   width: 100%;
-  padding: 7px 9px;
+  box-sizing: border-box;
+  padding: 6px 9px;
   border: none;
   border-radius: 6px;
   background: none;
@@ -2410,11 +2431,16 @@
 }
 .tenant-option-host {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: var(--text);
+  /* Never wrap — ellipsize instead of spilling onto a second line. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 .tenant-option-meta {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--muted);
 }
 .tenant-empty {

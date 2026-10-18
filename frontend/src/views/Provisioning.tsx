@@ -25,7 +25,10 @@ export function Provisioning() {
   const [setRes, setSetRes] = useState<ProvSetResult | null>(null)
   const [pending, setPending] = useState<'1' | '0' | null>(null)
   const [tenantOpen, setTenantOpen] = useState(false)
+  const [panelQuery, setPanelQuery] = useState('')
+  const [searchFocus, setSearchFocus] = useState(false)
   const tenantRef = useRef<HTMLDivElement | null>(null)
+  const searchRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     Promise.all([fetchProvStacks(), fetchProvFeatures()])
@@ -58,6 +61,15 @@ export function Provisioning() {
     }
   }, [tenantOpen])
 
+  // Focus the in-panel search box when the dropdown is opened via the ▾
+  // toggle (opening by clicking the text field keeps focus there instead).
+  useEffect(() => {
+    if (tenantOpen && searchFocus) {
+      searchRef.current?.focus()
+      setSearchFocus(false)
+    }
+  }, [tenantOpen, searchFocus])
+
   const selected = useMemo(() => stacks.find((s) => s.name === stack), [stacks, stack])
   // Matches when the tenant box holds the exact ID of a known tenant (typed or
   // picked from the dropdown).
@@ -65,11 +77,12 @@ export function Provisioning() {
     () => KNOWN_TENANTS.find((t) => t.id === tenant.trim()),
     [tenant],
   )
-  // Dropdown filtering matches ID, hostname, or stack label. A value that
-  // exactly matches a known tenant's ID is a completed pick, not a search —
-  // show the full list so the user can switch to a different tenant.
+  // Dropdown filtering matches ID, hostname, or stack label. The query comes
+  // from the in-panel search box, or from the main input when the user types
+  // there directly. An exact known-ID query is a completed pick, not a
+  // search — show the full list so another tenant can be chosen.
   const filteredTenants = useMemo(() => {
-    const q = tenant.trim().toLowerCase()
+    const q = panelQuery.trim().toLowerCase()
     if (!q || KNOWN_TENANTS.some((t) => t.id === q)) return KNOWN_TENANTS
     return KNOWN_TENANTS.filter(
       (t) =>
@@ -77,11 +90,12 @@ export function Provisioning() {
         t.hostname.toLowerCase().includes(q) ||
         t.stackDisplay.toLowerCase().includes(q),
     )
-  }, [tenant])
+  }, [panelQuery])
 
   const pickTenant = useCallback(
     (t: KnownTenant) => {
       setTenant(t.id)
+      setPanelQuery('')
       // Tenant IDs only exist on their home stack, so follow the pick.
       if (t.stack !== stack) {
         setStack(t.stack)
@@ -241,6 +255,7 @@ export function Provisioning() {
                 onChange={(e) => {
                   const v = e.target.value
                   setTenant(v)
+                  setPanelQuery(v)
                   setTenantOpen(true)
                   const m = KNOWN_TENANTS.find((t) => t.id === v.trim())
                   if (m && m.stack !== stack) {
@@ -256,15 +271,32 @@ export function Provisioning() {
                 data-testid="provisioning-tenant-toggle"
                 aria-label="Show known tenants"
                 aria-expanded={tenantOpen}
-                onClick={() => setTenantOpen((o) => !o)}
+                onClick={() => {
+                  if (!tenantOpen) setSearchFocus(true)
+                  setTenantOpen(!tenantOpen)
+                }}
               >
                 ▾
               </button>
               {tenantOpen && (
                 <div className="tenant-panel" data-testid="provisioning-tenant-panel">
+                  <input
+                    ref={searchRef}
+                    className="tenant-search"
+                    data-testid="provisioning-tenant-search"
+                    type="text"
+                    placeholder="Search tenants…"
+                    value={panelQuery}
+                    onChange={(e) => setPanelQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && filteredTenants.length === 1) {
+                        pickTenant(filteredTenants[0])
+                      }
+                    }}
+                  />
                   {filteredTenants.length === 0 ? (
                     <div className="tenant-empty" data-testid="provisioning-tenant-empty">
-                      No known tenant matches “{tenant.trim()}”
+                      No known tenant matches “{panelQuery.trim()}”
                     </div>
                   ) : (
                     filteredTenants.map((t) => (
