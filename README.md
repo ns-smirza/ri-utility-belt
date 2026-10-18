@@ -61,7 +61,7 @@ into the cluster's `callhomeservice-callhome` pod and curl-ing the in-cluster
 `provisioner-pycore` service from inside the pod.
 
 - **Tenant picker** — the Tenant ID field is a free-text box with a dropdown of known
-  Risk Insights tenants (`frontend/src/knownTenants.ts`, 14 entries across QA/STG/prod
+  Risk Insights tenants (`frontend/src/knownTenants.ts`, 15 entries across QA/STG/prod
   stacks; typing filters by ID, hostname, or stack). Picking one auto-selects its home
   stack and shows a hostname · stack hint under the field; any other ID can still be
   typed freely.

@@ -13,6 +13,7 @@ export interface KnownTenant {
 export const KNOWN_TENANTS: KnownTenant[] = [
   { id: '76316', hostname: 'riskinsights-qa01-vpe-e2e.qa.boomskope.com', stack: 'stork-qa01-mp-npe-iad0-nc1.yaml', stackDisplay: 'QA01' },
   { id: '2568', hostname: 'risk-insights-stg01.stg.boomskope.com', stack: 'stork-stg01-mp-iad0-nc4.yaml', stackDisplay: 'STG01' },
+  { id: '109002', hostname: 'riskinsights-stg01-vpe-e2e.stg.boomskope.com', stack: 'stork-stg01-mp-iad0-nc4.yaml', stackDisplay: 'STG01' },
   { id: '2498', hostname: 'risk-insights-qa01.qa.boomskope.com', stack: 'stork-qa01-mp-npe-iad0-nc1.yaml', stackDisplay: 'QA01' },
   { id: '27389', hostname: 'riskinsights-bom3.goskope.com', stack: 'stork-bom3-mp-prod-bom3-nc1.yaml', stackDisplay: 'BOM3' },
   { id: '18316', hostname: 'riskinsights-ruh1-1.goskope.com', stack: 'stork-ruh1-mp-prod-ruh1-nc1.yaml', stackDisplay: 'RUH1' },
