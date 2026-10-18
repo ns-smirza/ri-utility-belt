@@ -2341,3 +2341,11 @@
 .rows-all-select:hover {
   background: var(--accent-soft);
 }
+
+/* Provisioning — known-tenant hint under the Tenant ID input */
+.prov-tenant-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--muted);
+}

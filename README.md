@@ -60,6 +60,10 @@ Enable / disable feature-flag groups for a tenant on a chosen stack by `kubectl 
 into the cluster's `callhomeservice-callhome` pod and curl-ing the in-cluster
 `provisioner-pycore` service from inside the pod.
 
+- **Tenant picker** — the Tenant ID field is a free-text box with a datalist of known
+  Risk Insights tenants (`frontend/src/knownTenants.ts`, 14 entries across QA/STG/prod
+  stacks; typing filters by ID or hostname). Picking one auto-selects its home stack and
+  shows a hostname · stack hint under the field; any other ID can still be typed freely.
 - Features (defined in `backend/provisioner.py` `FEATURES`):
   - **VPE Beta** — `nplan5663_vpe_setting_enabled`
   - **AI Guardrails** — `nplan5283_ai_security`, `nplan5663_vpe_setting_enabled`, `nplan6445_aiguardrails_vpe`

@@ -9,6 +9,7 @@ import {
   type ProvSetResult,
   type ProvStack,
 } from '../api'
+import { KNOWN_TENANTS } from '../knownTenants'
 
 type Busy = 'check' | 'set' | null
 
@@ -37,6 +38,12 @@ export function Provisioning() {
   }, [])
 
   const selected = useMemo(() => stacks.find((s) => s.name === stack), [stacks, stack])
+  // Matches when the tenant box holds the exact ID of a known tenant (typed or
+  // picked from the datalist).
+  const knownTenant = useMemo(
+    () => KNOWN_TENANTS.find((t) => t.id === tenant.trim()),
+    [tenant],
+  )
   const parsedCustomFlags = useMemo(
     () =>
       customFlags
@@ -165,15 +172,40 @@ export function Provisioning() {
 
           <label className="prov-field">
             <span className="prov-label">Tenant ID</span>
+            {/* Free-text ID or pick a known tenant from the datalist (typing
+                filters by hostname too). Picking a known tenant auto-selects
+                its home stack, since tenant IDs only exist there. */}
             <input
               className="prov-input"
               data-testid="provisioning-tenant-input"
               type="text"
               inputMode="numeric"
               placeholder="e.g. 18320"
+              list="prov-tenant-list"
               value={tenant}
-              onChange={(e) => setTenant(e.target.value.replace(/[^0-9]/g, ''))}
+              onChange={(e) => {
+                const v = e.target.value
+                setTenant(v)
+                const m = KNOWN_TENANTS.find((t) => t.id === v.trim())
+                if (m && m.stack !== stack) {
+                  setStack(m.stack)
+                  setCheckRes(null)
+                  setSetRes(null)
+                }
+              }}
             />
+            <datalist id="prov-tenant-list" data-testid="provisioning-tenant-list">
+              {KNOWN_TENANTS.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.hostname} · {t.stackDisplay}
+                </option>
+              ))}
+            </datalist>
+            {knownTenant && (
+              <span className="prov-tenant-hint" data-testid="provisioning-tenant-hint">
+                {knownTenant.hostname} · {knownTenant.stackDisplay}
+              </span>
+            )}
           </label>
 
           <div className="prov-actions">
