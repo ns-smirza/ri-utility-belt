@@ -3,7 +3,7 @@ import type { Stack } from '../types'
 import { imageName, imageTag } from './CompareView'
 
 interface Row {
-  /** Image name without tag (e.g. "alarmmanager"); '' = unset. */
+  /** Image name without tag (e.g. "alarmmanager"). */
   image: string
   /** Expected tag (e.g. "1.0.39"); '' = unset. */
   version: string
@@ -14,17 +14,18 @@ interface Props {
   refreshing: boolean
 }
 
-// Per-image version compliance: each control row is an independent
-// image+version pair ("+ Add image" appends another set of controls).
-// Complete rows render as rows of ONE table — row header is the
-// image:version, columns list the stacks where that exact tag exists vs
-// those where it does not (a stack on another tag lands in "Does Not
-// Exist" with its actual tag shown). Session-only state, like the Compare
-// view — a page reload starts fresh.
+// Per-image version compliance: a horizontal checkbox strip lists every pod
+// image; checking one appends a control row (static image label + version
+// textbox + suggestion pills), unchecking removes it — no "Add image"
+// button needed. Every row with a version set becomes a row of ONE table —
+// row header is the image:version, columns list the stacks where that exact
+// tag exists vs those where it does not (a stack on another tag lands in
+// "Does Not Exist" with its actual tag shown). Session-only state, like the
+// Compare view — a page reload starts fresh.
 export function VersionCheckView({ stacks, refreshing }: Props) {
-  const [rows, setRows] = useState<Row[]>([{ image: '', version: '' }])
+  const [rows, setRows] = useState<Row[]>([])
 
-  // Union of pod image names across all stacks, sorted — the dropdown source.
+  // Union of pod image names across all stacks, sorted — the checkbox source.
   const imageNames = useMemo(() => {
     const set = new Set<string>()
     for (const s of stacks) s.images.forEach((im) => set.add(imageName(im.image)))
@@ -54,12 +55,16 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
     return out
   }, [stacks])
 
+  const toggleImage = (name: string) =>
+    setRows((cur) =>
+      cur.some((r) => r.image === name)
+        ? cur.filter((r) => r.image !== name)
+        : [...cur, { image: name, version: '' }],
+    )
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-  const removeRow = (i: number) => setRows((cur) => cur.filter((_, j) => j !== i))
-  const addRow = () => setRows((cur) => [...cur, { image: '', version: '' }])
 
-  const isComplete = (r: Row) => !!r.image && !!r.version.trim()
+  const isComplete = (r: Row) => !!r.version.trim()
 
   // Bucket every stack for one row: exact tag match vs everything else
   // (missing entirely, or present at another tag — actual tag kept for display).
@@ -87,32 +92,44 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
             Gathering data…
           </div>
         )}
-        <div className="vcheck-rows">
-          {rows.map((row, i) => (
-            <div className="vcheck-row" key={i} data-testid={`vcheck-row-${i}`}>
-              <select
-                className="prov-select"
-                data-testid={`vcheck-image-select-${i}`}
-                value={row.image}
-                onChange={(e) => updateRow(i, { image: e.target.value })}
-                aria-label={`Pod image for row ${i + 1}`}
-              >
-                <option value="">Select image…</option>
-                {imageNames.map((n) => (
-                  <option key={n} value={n}>
-                    {n}
-                  </option>
-                ))}
-              </select>
+        <div
+          className="vcheck-image-picker"
+          data-testid="vcheck-image-picker"
+          role="group"
+          aria-label="Pod images"
+        >
+          {imageNames.map((name) => (
+            <label
+              key={name}
+              className={`vcheck-image-check${
+                rows.some((r) => r.image === name) ? ' checked' : ''
+              }`}
+              data-testid={`vcheck-image-check-${name}`}
+            >
               <input
-                className="prov-input"
-                data-testid={`vcheck-version-input-${i}`}
-                type="text"
-                placeholder="version, e.g. 1.0.39"
-                value={row.version}
-                onChange={(e) => updateRow(i, { version: e.target.value })}
+                type="checkbox"
+                checked={rows.some((r) => r.image === name)}
+                onChange={() => toggleImage(name)}
               />
-              {row.image && (
+              {name}
+            </label>
+          ))}
+        </div>
+        {rows.length > 0 && (
+          <div className="vcheck-rows">
+            {rows.map((row, i) => (
+              <div className="vcheck-row" key={row.image} data-testid={`vcheck-row-${i}`}>
+                <span className="vcheck-row-image" data-testid={`vcheck-image-label-${i}`}>
+                  {row.image}
+                </span>
+                <input
+                  className="prov-input"
+                  data-testid={`vcheck-version-input-${i}`}
+                  type="text"
+                  placeholder="version, e.g. 1.0.39"
+                  value={row.version}
+                  onChange={(e) => updateRow(i, { version: e.target.value })}
+                />
                 <div
                   className="vcheck-pills"
                   data-testid={`vcheck-pills-${i}`}
@@ -134,31 +151,28 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
                     </button>
                   ))}
                 </div>
-              )}
-              <button
-                className="compare-remove"
-                data-testid={`vcheck-remove-${i}`}
-                onClick={() => removeRow(i)}
-                title="Remove"
-                aria-label={`Remove row ${i + 1}`}
-              >
-                ×
-              </button>
-            </div>
-          ))}
-          <button
-            className="compare-add vcheck-add-btn"
-            data-testid="vcheck-add"
-            onClick={addRow}
-          >
-            + Add image
-          </button>
-        </div>
+                <button
+                  className="compare-remove"
+                  data-testid={`vcheck-remove-${i}`}
+                  onClick={() => toggleImage(row.image)}
+                  title="Remove"
+                  aria-label={`Remove ${row.image}`}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {!anyComplete ? (
         <div className="table-card compare-empty" data-testid="vcheck-empty">
-          <p>Pick an image and a version above to see which stacks have it.</p>
+          <p>
+            {rows.length === 0
+              ? 'Tick one or more images above, then pick a version for each.'
+              : 'Pick a version above to see which stacks have it.'}
+          </p>
         </div>
       ) : (
         <div className="table-card vcheck-card" data-testid="vcheck-card">
@@ -176,7 +190,7 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
                 const version = row.version.trim()
                 const { exists, missing } = bucket(row)
                 return (
-                  <tr key={i} data-testid={`vcheck-trow-${i}`}>
+                  <tr key={row.image} data-testid={`vcheck-trow-${i}`}>
                     <th className="vcheck-title" data-testid={`vcheck-title-${i}`}>
                       {row.image}
                       <span className="vcheck-ver">:{version}</span>

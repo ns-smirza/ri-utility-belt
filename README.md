@@ -49,18 +49,18 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   A **Rows ▾** dropdown above the table lists every row header with a checkbox
   (all on by default); unchecking hides those rows. Compare state is
   session-only — a page reload starts fresh. Pure frontend — reuses `/api/data`.
-- **Version Check view** (the **Versions** tab): each row is an independent
-  image+version pair (image dropdown + free-text version); **+ Add image**
-  appends another set of controls, × removes a row. Once an image is picked,
-  its observed tags appear as **pill buttons** next to the version box
-  (most-common first, hover shows the stack count) — click one to fill the
-  version, or type any custom version. Every complete row becomes
-  a row in one shared table — row header is `image:version`, with **Exists**
-  and **Does Not Exist** columns listing stacks as env-tinted chips that wrap
-  horizontally (count shown per cell; a stack on another tag shows its actual
-  tag, e.g. `MEL2 (1.0.37)`). The header **All / Prod / NPE** tabs
-  also apply here, scoping the chips to that environment. Session-only state,
-  pure frontend — reuses `/api/data`.
+- **Version Check view** (the **Versions** tab): a horizontal strip of
+  **checkboxes, one per pod image** — ticking an image adds a control row
+  (static image label + free-text version box), unticking removes it. Once an
+  image is ticked, its observed tags appear as **pill buttons** next to the
+  version box (most-common first, hover shows the stack count) — click one to
+  fill the version, or type any custom version. Every row with a version set
+  becomes a row in one shared table — row header is `image:version`, with
+  **Exists** and **Does Not Exist** columns listing stacks as env-tinted chips
+  that wrap horizontally (count shown per cell; a stack on another tag shows
+  its actual tag, e.g. `MEL2 (1.0.37)`). The header **All / Prod / NPE** tabs
+  also apply here, scoping the checkboxes and chips to that environment.
+  Session-only state, pure frontend — reuses `/api/data`.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.
 - Search across stack names + version strings (with match highlighting).
 - **Snapshot** button copies the full table (all columns/rows, including off-screen) to the
