@@ -61,6 +61,14 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
         ? cur.filter((r) => r.image !== name)
         : [...cur, { image: name, version: '' }],
     )
+  // Select all keeps any versions already typed; unselect all clears everything.
+  const selectAll = () =>
+    setRows((cur) =>
+      imageNames.map(
+        (n) => cur.find((r) => r.image === n) ?? { image: n, version: '' },
+      ),
+    )
+  const clearAll = () => setRows([])
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
@@ -114,6 +122,26 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
               {name}
             </label>
           ))}
+          <span className="vcheck-picker-actions">
+            <button
+              type="button"
+              className="vcheck-picker-btn"
+              data-testid="vcheck-select-all"
+              disabled={rows.length === imageNames.length}
+              onClick={selectAll}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="vcheck-picker-btn"
+              data-testid="vcheck-clear-all"
+              disabled={rows.length === 0}
+              onClick={clearAll}
+            >
+              Unselect all
+            </button>
+          </span>
         </div>
         {rows.length > 0 && (
           <div className="vcheck-rows">

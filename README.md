@@ -51,9 +51,12 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   session-only — a page reload starts fresh. Pure frontend — reuses `/api/data`.
 - **Version Check view** (the **Versions** tab): a horizontal strip of
   **checkboxes, one per pod image** — ticking an image adds a control row
-  (static image label + free-text version box), unticking removes it. Once an
-  image is ticked, its observed tags appear as **pill buttons** next to the
-  version box (most-common first, hover shows the stack count) — click one to
+  (static image label + free-text version box), unticking removes it;
+  **Select all** / **Unselect all** buttons toggle the whole strip (selecting
+  all keeps versions already typed). Row labels are fixed-width so all version
+  boxes line up vertically. Once an image is ticked, its observed tags appear
+  as **pill buttons** next to the version box (most-common first, hover shows
+  the stack count) — click one to
   fill the version, or type any custom version. Every row with a version set
   becomes a row in one shared table — row header is `image:version`, with
   **Exists** and **Does Not Exist** columns listing stacks as env-tinted chips
