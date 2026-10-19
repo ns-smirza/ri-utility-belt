@@ -9,8 +9,9 @@
   --border: #e5e8f0;
   --accent: #3b6df0;
   --accent-soft: #e8efff;
-  --prod: #e23b54;
-  --prod-soft: #fde8ec;
+  /* prod = green (live/healthy); red read as "error" — changed 2026-10-19 */
+  --prod: #167a3d;
+  --prod-soft: #e8f7ee;
   --npe: #2f7df0;
   --npe-soft: #e6f0fe;
   --ok: #18a058;

@@ -21,6 +21,8 @@ Per-Rancher-cluster view of the running **pod images** and the **internal packag
 shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
 
 - Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images, Deployment Age.
+- Env accents are **green for Prod** and blue for NPE (prod was red until 2026-10-19;
+  red reads as "error" in a dashboard).
 - **Pod Images** column shows one running replica per service with a green dot; a red dot
   (with status tooltip: `Running`, `CrashLoopBackOff`, `Terminating`, …) appears only when
   a service has **no** running replica. Gathers `artifactservice`, `artifactsync`,
@@ -54,8 +56,9 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   **Exists · N** (stacks at exactly that tag) and **Does Not Exist · M**
   (missing the image, or on another tag with the actual tag shown, e.g.
   `MEL2 (1.0.37)`) — rendered as env-tinted chips that wrap horizontally
-  rather than one table row per stack. Session-only state, pure frontend —
-  reuses `/api/data`.
+  rather than one table row per stack. The header **All / Prod / NPE** tabs
+  also apply here, scoping the chips to that environment. Session-only state,
+  pure frontend — reuses `/api/data`.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.
 - Search across stack names + version strings (with match highlighting).
 - **Snapshot** button copies the full table (all columns/rows, including off-screen) to the

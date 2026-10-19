@@ -141,6 +141,11 @@ export function StackVersionDashboard() {
     (s) => tab === 'all' || s.env === (tab as Env),
   ).length
 
+  // Env filter for the Version Check view (search/sort stay table-only).
+  const envFiltered = (data?.stacks ?? []).filter(
+    (s) => tab === 'all' || s.env === (tab as Env),
+  )
+
   // Show the "gathering" progress UI only for an explicit user refresh, or
   // before the first dataset has arrived. Background auto-refresh stays silent.
   const showRefreshing = manualRefresh || !hasData
@@ -206,9 +211,11 @@ export function StackVersionDashboard() {
               Versions
             </button>
           </div>
+          {(viewMode === 'table' || viewMode === 'versions') && (
+            <Tabs tab={tab} onChange={setTab} />
+          )}
           {viewMode === 'table' && (
             <>
-              <Tabs tab={tab} onChange={setTab} />
               <SearchBar value={query} onChange={setQuery} />
               <SnapshotButton onSnapshot={onSnapshot} disabled={filtered.length === 0} />
             </>
@@ -249,7 +256,7 @@ export function StackVersionDashboard() {
           />
         )}
         {viewMode === 'versions' && (
-          <VersionCheckView stacks={data?.stacks ?? []} refreshing={showRefreshing} />
+          <VersionCheckView stacks={envFiltered} refreshing={showRefreshing} />
         )}
       </main>
 
