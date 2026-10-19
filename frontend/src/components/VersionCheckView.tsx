@@ -118,7 +118,6 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
           if (!isComplete(row)) return null
           const version = row.version.trim()
           const { exists, missing } = bucket(row)
-          const rowCount = Math.max(exists.length, missing.length)
           return (
             <div
               className="table-card vcheck-card"
@@ -130,49 +129,49 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
                   {row.image}
                   <span className="vcheck-ver">:{version}</span>
                 </span>
-                <span className="vcheck-counts" data-testid={`vcheck-counts-${i}`}>
-                  {exists.length} exist · {missing.length} don't
-                </span>
               </div>
-              <table className="data-table vcheck-table">
-                <thead>
-                  <tr>
-                    <th>Exists</th>
-                    <th>Does Not Exist</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Array.from({ length: rowCount }, (_, r) => {
-                    const have = exists[r]
-                    const miss = missing[r]
-                    return (
-                      <tr key={r}>
-                        <td data-testid={have ? `vcheck-exists-${i}-${have.name}` : undefined}>
-                          {have && (
-                            <span className="vcheck-stack">
-                              <span className={`env-badge env-${have.env}`}>{have.env}</span>
-                              {have.displayName || have.name}
-                            </span>
-                          )}
-                        </td>
-                        <td data-testid={miss ? `vcheck-missing-${i}-${miss.stack.name}` : undefined}>
-                          {miss && (
-                            <span className="vcheck-stack">
-                              <span className={`env-badge env-${miss.stack.env}`}>
-                                {miss.stack.env}
-                              </span>
-                              {miss.stack.displayName || miss.stack.name}
-                              {miss.actual !== null && (
-                                <span className="vcheck-actual">({miss.actual})</span>
-                              )}
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+              {/* Chips instead of one row per stack — a table of 19 rows took
+                  too much vertical space. Chips are env-tinted (prod/npe soft
+                  colors), so no separate env badge is needed. */}
+              <div className="vcheck-cols">
+                <div className="vcheck-col" data-testid={`vcheck-exists-col-${i}`}>
+                  <div className="vcheck-col-head vcheck-col-yes">
+                    Exists · {exists.length}
+                  </div>
+                  <div className="vcheck-chips">
+                    {exists.length === 0 && <span className="vcheck-none">none</span>}
+                    {exists.map((s) => (
+                      <span
+                        key={s.name}
+                        className={`vcheck-chip env-${s.env}`}
+                        data-testid={`vcheck-exists-${i}-${s.name}`}
+                      >
+                        {s.displayName || s.name}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="vcheck-col" data-testid={`vcheck-missing-col-${i}`}>
+                  <div className="vcheck-col-head vcheck-col-no">
+                    Does Not Exist · {missing.length}
+                  </div>
+                  <div className="vcheck-chips">
+                    {missing.length === 0 && <span className="vcheck-none">none</span>}
+                    {missing.map((m) => (
+                      <span
+                        key={m.stack.name}
+                        className={`vcheck-chip env-${m.stack.env}`}
+                        data-testid={`vcheck-missing-${i}-${m.stack.name}`}
+                      >
+                        {m.stack.displayName || m.stack.name}
+                        {m.actual !== null && (
+                          <span className="vcheck-actual">{m.actual}</span>
+                        )}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
           )
         })

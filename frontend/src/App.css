@@ -2489,24 +2489,67 @@
 .vcheck-ver {
   color: var(--accent);
 }
-.vcheck-counts {
-  margin-left: auto;
-  font-size: 12px;
-  color: var(--muted);
+.vcheck-cols {
+  display: flex;
 }
-.vcheck-table th {
-  width: 50%;
+.vcheck-col {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 16px 14px;
 }
-.vcheck-table td {
-  vertical-align: top;
+.vcheck-col + .vcheck-col {
+  border-left: 1px solid var(--border);
 }
-.vcheck-stack {
+.vcheck-col-head {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+.vcheck-col-yes {
+  color: #167a3d;
+}
+.vcheck-col-no {
+  color: #5a6378;
+}
+.vcheck-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.vcheck-chip {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.vcheck-chip.env-prod {
+  background: var(--prod-soft);
+  color: var(--prod);
+}
+.vcheck-chip.env-npe {
+  background: var(--npe-soft);
+  color: var(--npe);
+}
+.vcheck-none {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--muted);
 }
 .vcheck-actual {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
-  color: var(--muted);
+  font-weight: 400;
+  opacity: 0.75;
+}
+.vcheck-actual::before {
+  content: '(';
+}
+.vcheck-actual::after {
+  content: ')';
 }
