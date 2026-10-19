@@ -2454,18 +2454,21 @@
   padding: 14px 16px;
   margin-bottom: 14px;
 }
-.vcheck-controls {
+.vcheck-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vcheck-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
 }
-.vcheck-controls .prov-input {
+.vcheck-row .prov-input {
   min-width: 180px;
 }
-.vcheck-add-btn:disabled {
-  opacity: 0.5;
-  cursor: default;
+.vcheck-add-btn {
+  align-self: flex-start;
 }
 .vcheck-card {
   margin-bottom: 16px;
