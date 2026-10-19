@@ -31,6 +31,29 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
     return [...set].sort()
   }, [stacks])
 
+  // Distinct tags per image with stack counts, sorted most-common first —
+  // the version suggestion pills. Typing a custom version stays possible.
+  const tagsByImage = useMemo(() => {
+    const map = new Map<string, Map<string, number>>()
+    for (const s of stacks)
+      for (const im of s.images) {
+        const name = imageName(im.image)
+        const tag = imageTag(im.image)
+        if (!map.has(name)) map.set(name, new Map())
+        const tags = map.get(name)!
+        tags.set(tag, (tags.get(tag) ?? 0) + 1)
+      }
+    const out = new Map<string, { tag: string; count: number }[]>()
+    for (const [name, tags] of map)
+      out.set(
+        name,
+        [...tags.entries()]
+          .map(([tag, count]) => ({ tag, count }))
+          .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
+      )
+    return out
+  }, [stacks])
+
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)))
   const removeRow = (i: number) => setRows((cur) => cur.filter((_, j) => j !== i))
@@ -89,6 +112,29 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
                 value={row.version}
                 onChange={(e) => updateRow(i, { version: e.target.value })}
               />
+              {row.image && (
+                <div
+                  className="vcheck-pills"
+                  data-testid={`vcheck-pills-${i}`}
+                  role="group"
+                  aria-label={`Version suggestions for ${row.image}`}
+                >
+                  {(tagsByImage.get(row.image) ?? []).map(({ tag, count }) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      className={`vcheck-pill${
+                        row.version.trim() === tag ? ' active' : ''
+                      }`}
+                      data-testid={`vcheck-pill-${i}-${tag}`}
+                      title={`${count} stack${count === 1 ? '' : 's'} on ${tag}`}
+                      onClick={() => updateRow(i, { version: tag })}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
               <button
                 className="compare-remove"
                 data-testid={`vcheck-remove-${i}`}
