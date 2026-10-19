@@ -2448,3 +2448,62 @@
   font-size: 12px;
   color: var(--muted);
 }
+
+/* Version Check view — per-image Exists / Does Not Exist tables */
+.vcheck-toolbar {
+  padding: 14px 16px;
+  margin-bottom: 14px;
+}
+.vcheck-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vcheck-controls .prov-input {
+  min-width: 180px;
+}
+.vcheck-add-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.vcheck-card {
+  margin-bottom: 16px;
+}
+.vcheck-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.vcheck-title {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.vcheck-ver {
+  color: var(--accent);
+}
+.vcheck-counts {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+.vcheck-table th {
+  width: 50%;
+}
+.vcheck-table td {
+  vertical-align: top;
+}
+.vcheck-stack {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.vcheck-actual {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}

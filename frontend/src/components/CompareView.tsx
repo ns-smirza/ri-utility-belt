@@ -6,12 +6,12 @@ const MAX_STACKS = 5
 
 const PKG_ROWS = COLUMNS.filter((c) => c.kind === 'pkg')
 
-function imageName(image: string): string {
+export function imageName(image: string): string {
   const i = image.lastIndexOf(':')
   return i > 0 ? image.slice(0, i) : image
 }
 
-function imageTag(image: string): string {
+export function imageTag(image: string): string {
   const i = image.lastIndexOf(':')
   return i > 0 ? image.slice(i + 1) : image
 }

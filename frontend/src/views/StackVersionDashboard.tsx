@@ -7,6 +7,7 @@ import { RefreshButton } from '../components/RefreshButton'
 import { StatusLabels } from '../components/StatusLabels'
 import { DataTable } from '../components/DataTable'
 import { CompareView } from '../components/CompareView'
+import { VersionCheckView } from '../components/VersionCheckView'
 import { SearchBar } from '../components/SearchBar'
 import { SnapshotButton } from '../components/SnapshotButton'
 
@@ -31,7 +32,7 @@ export function StackVersionDashboard() {
   const [tab, setTab] = useState<TabKey>('all')
   const [query, setQuery] = useState('')
   const [fullVersions, setFullVersions] = useState(false)
-  const [viewMode, setViewMode] = useState<'table' | 'compare'>('table')
+  const [viewMode, setViewMode] = useState<'table' | 'compare' | 'versions'>('table')
   const [now, setNow] = useState<number>(() => Date.now())
   // manualRefresh = a refresh the user explicitly triggered (show progress UI).
   // Background/scheduled refreshes swap data silently — no progress UI.
@@ -195,6 +196,15 @@ export function StackVersionDashboard() {
             >
               Compare
             </button>
+            <button
+              role="tab"
+              aria-selected={viewMode === 'versions'}
+              className={`tab${viewMode === 'versions' ? ' tab-active' : ''}`}
+              data-testid="view-versions"
+              onClick={() => setViewMode('versions')}
+            >
+              Versions
+            </button>
           </div>
           {viewMode === 'table' && (
             <>
@@ -221,7 +231,7 @@ export function StackVersionDashboard() {
       )}
 
       <main className="view-main">
-        {viewMode === 'table' ? (
+        {viewMode === 'table' && (
           <DataTable
             stacks={filtered}
             refreshing={showRefreshing}
@@ -230,12 +240,16 @@ export function StackVersionDashboard() {
             tableRef={tableRef}
             scrollRef={scrollRef}
           />
-        ) : (
+        )}
+        {viewMode === 'compare' && (
           <CompareView
             stacks={data?.stacks ?? []}
             refreshing={showRefreshing}
             fullVersions={fullVersions}
           />
+        )}
+        {viewMode === 'versions' && (
+          <VersionCheckView stacks={data?.stacks ?? []} refreshing={showRefreshing} />
         )}
       </main>
 
