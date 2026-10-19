@@ -26,4 +26,5 @@ export const KNOWN_TENANTS: KnownTenant[] = [
   { id: '18317', hostname: 'riskinsights-am2-1.eu.goskope.com', stack: 'c4-am2.yaml', stackDisplay: 'AM2' },
   { id: '18326', hostname: 'riskinsights-sv5-1.goskope.com', stack: 'c1-sv5.yaml', stackDisplay: 'SV5' },
   { id: '18321', hostname: 'riskinsights-zur2-1.goskope.com', stack: 'stork-zur2-mp-prod-zur2-nc1.yaml', stackDisplay: 'ZUR2' },
+  { id: '18323', hostname: 'riskinsights-dfw3-1.goskope.com', stack: 'stork-dfw3-mp-prod-dfw3-nc1.yaml', stackDisplay: 'DFW3' },
 ]
