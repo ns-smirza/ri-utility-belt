@@ -14,12 +14,13 @@ interface Props {
   refreshing: boolean
 }
 
-// Per-image version compliance: each row is an independent image+version
-// pair ("+ Add image" appends another set of controls). A complete row gets
-// its own table listing the stacks where that exact tag exists vs those
-// where it does not; a stack on another tag lands in "Does Not Exist" with
-// its actual tag shown. Session-only state, like the Compare view — a page
-// reload starts fresh.
+// Per-image version compliance: each control row is an independent
+// image+version pair ("+ Add image" appends another set of controls).
+// Complete rows render as rows of ONE table — row header is the
+// image:version, columns list the stacks where that exact tag exists vs
+// those where it does not (a stack on another tag lands in "Does Not
+// Exist" with its actual tag shown). Session-only state, like the Compare
+// view — a page reload starts fresh.
 export function VersionCheckView({ stacks, refreshing }: Props) {
   const [rows, setRows] = useState<Row[]>([{ image: '', version: '' }])
 
@@ -114,67 +115,77 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
           <p>Pick an image and a version above to see which stacks have it.</p>
         </div>
       ) : (
-        rows.map((row, i) => {
-          if (!isComplete(row)) return null
-          const version = row.version.trim()
-          const { exists, missing } = bucket(row)
-          return (
-            <div
-              className="table-card vcheck-card"
-              key={i}
-              data-testid={`vcheck-card-${i}`}
-            >
-              <div className="vcheck-head">
-                <span className="vcheck-title" data-testid={`vcheck-title-${i}`}>
-                  {row.image}
-                  <span className="vcheck-ver">:{version}</span>
-                </span>
-              </div>
-              {/* Chips instead of one row per stack — a table of 19 rows took
-                  too much vertical space. Chips are env-tinted (prod/npe soft
-                  colors), so no separate env badge is needed. */}
-              <div className="vcheck-cols">
-                <div className="vcheck-col" data-testid={`vcheck-exists-col-${i}`}>
-                  <div className="vcheck-col-head vcheck-col-yes">
-                    Exists · {exists.length}
-                  </div>
-                  <div className="vcheck-chips">
-                    {exists.length === 0 && <span className="vcheck-none">none</span>}
-                    {exists.map((s) => (
-                      <span
-                        key={s.name}
-                        className={`vcheck-chip env-${s.env}`}
-                        data-testid={`vcheck-exists-${i}-${s.name}`}
-                      >
-                        {s.displayName || s.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="vcheck-col" data-testid={`vcheck-missing-col-${i}`}>
-                  <div className="vcheck-col-head vcheck-col-no">
-                    Does Not Exist · {missing.length}
-                  </div>
-                  <div className="vcheck-chips">
-                    {missing.length === 0 && <span className="vcheck-none">none</span>}
-                    {missing.map((m) => (
-                      <span
-                        key={m.stack.name}
-                        className={`vcheck-chip env-${m.stack.env}`}
-                        data-testid={`vcheck-missing-${i}-${m.stack.name}`}
-                      >
-                        {m.stack.displayName || m.stack.name}
-                        {m.actual !== null && (
-                          <span className="vcheck-actual">{m.actual}</span>
+        <div className="table-card vcheck-card" data-testid="vcheck-card">
+          <table className="vcheck-table" data-testid="vcheck-table">
+            <thead>
+              <tr>
+                <th className="vcheck-th-image">Image</th>
+                <th className="vcheck-th">Exists</th>
+                <th className="vcheck-th">Does Not Exist</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => {
+                if (!isComplete(row)) return null
+                const version = row.version.trim()
+                const { exists, missing } = bucket(row)
+                return (
+                  <tr key={i} data-testid={`vcheck-trow-${i}`}>
+                    <th className="vcheck-title" data-testid={`vcheck-title-${i}`}>
+                      {row.image}
+                      <span className="vcheck-ver">:{version}</span>
+                    </th>
+                    {/* Chips instead of one row per stack — a table of 19
+                        rows took too much vertical space. Chips are
+                        env-tinted (prod/npe soft colors), so no separate
+                        env badge is needed. */}
+                    <td data-testid={`vcheck-exists-col-${i}`}>
+                      <div className="vcheck-chips">
+                        <span className="vcheck-count vcheck-col-yes">
+                          {exists.length}
+                        </span>
+                        {exists.length === 0 && (
+                          <span className="vcheck-none">none</span>
                         )}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )
-        })
+                        {exists.map((s) => (
+                          <span
+                            key={s.name}
+                            className={`vcheck-chip env-${s.env}`}
+                            data-testid={`vcheck-exists-${i}-${s.name}`}
+                          >
+                            {s.displayName || s.name}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td data-testid={`vcheck-missing-col-${i}`}>
+                      <div className="vcheck-chips">
+                        <span className="vcheck-count vcheck-col-no">
+                          {missing.length}
+                        </span>
+                        {missing.length === 0 && (
+                          <span className="vcheck-none">none</span>
+                        )}
+                        {missing.map((m) => (
+                          <span
+                            key={m.stack.name}
+                            className={`vcheck-chip env-${m.stack.env}`}
+                            data-testid={`vcheck-missing-${i}-${m.stack.name}`}
+                          >
+                            {m.stack.displayName || m.stack.name}
+                            {m.actual !== null && (
+                              <span className="vcheck-actual">{m.actual}</span>
+                            )}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   )

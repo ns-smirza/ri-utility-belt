@@ -51,12 +51,11 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   session-only — a page reload starts fresh. Pure frontend — reuses `/api/data`.
 - **Version Check view** (the **Versions** tab): each row is an independent
   image+version pair (image dropdown + free-text version); **+ Add image**
-  appends another set of controls, × removes a row. As soon as a row has both
-  fields it gets its own card titled `image:version` with two columns —
-  **Exists · N** (stacks at exactly that tag) and **Does Not Exist · M**
-  (missing the image, or on another tag with the actual tag shown, e.g.
-  `MEL2 (1.0.37)`) — rendered as env-tinted chips that wrap horizontally
-  rather than one table row per stack. The header **All / Prod / NPE** tabs
+  appends another set of controls, × removes a row. Every complete row becomes
+  a row in one shared table — row header is `image:version`, with **Exists**
+  and **Does Not Exist** columns listing stacks as env-tinted chips that wrap
+  horizontally (count shown per cell; a stack on another tag shows its actual
+  tag, e.g. `MEL2 (1.0.37)`). The header **All / Prod / NPE** tabs
   also apply here, scoping the chips to that environment. Session-only state,
   pure frontend — reuses `/api/data`.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.

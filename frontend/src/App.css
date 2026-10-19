@@ -2449,7 +2449,7 @@
   color: var(--muted);
 }
 
-/* Version Check view — per-image Exists / Does Not Exist tables */
+/* Version Check view — one table, row headers = image:version */
 .vcheck-toolbar {
   padding: 14px 16px;
   margin-bottom: 14px;
@@ -2472,40 +2472,50 @@
 }
 .vcheck-card {
   margin-bottom: 16px;
+  overflow-x: auto;
 }
-.vcheck-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 11px 16px;
+.vcheck-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.vcheck-table th,
+.vcheck-table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 10px 16px;
   border-bottom: 1px solid var(--border);
+}
+.vcheck-table tbody tr:last-child th,
+.vcheck-table tbody tr:last-child td {
+  border-bottom: none;
+}
+.vcheck-table thead th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  background: var(--card-alt);
+}
+.vcheck-th-image {
+  width: 1%;
+  white-space: nowrap;
 }
 .vcheck-title {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
+  white-space: nowrap;
 }
 .vcheck-ver {
   color: var(--accent);
 }
-.vcheck-cols {
-  display: flex;
-}
-.vcheck-col {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 16px 14px;
-}
-.vcheck-col + .vcheck-col {
-  border-left: 1px solid var(--border);
-}
-.vcheck-col-head {
+.vcheck-count {
   font-size: 11px;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  min-width: 18px;
+  text-align: right;
 }
 .vcheck-col-yes {
   color: #167a3d;
@@ -2516,6 +2526,7 @@
 .vcheck-chips {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
 }
 .vcheck-chip {
