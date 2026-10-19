@@ -2524,6 +2524,17 @@
   color: var(--muted);
   background: var(--card-alt);
 }
+/* Center + bold the Exists / Does Not Exist headers, and separate the two
+   columns with a divider so the chip groups don't blur together. */
+.vcheck-table thead th.vcheck-th {
+  text-align: center;
+  font-weight: 800;
+  color: var(--text);
+}
+.vcheck-table th:nth-child(3),
+.vcheck-table td:nth-child(3) {
+  border-left: 2px solid var(--border);
+}
 .vcheck-th-image {
   width: 1%;
   white-space: nowrap;
