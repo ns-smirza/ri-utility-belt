@@ -1080,6 +1080,15 @@
   display: block;
 }
 
+/* Package cells: fixed height with vertical scroll (~6 lines), so a stack
+   with dozens of versions (e.g. SV5 aup-sf) doesn't blow out the row. */
+.multi-cell.pkg-list {
+  max-height: 124px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 .cell-line {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 12.5px;

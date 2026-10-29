@@ -21,6 +21,11 @@ Per-Rancher-cluster view of the running **pod images** and the **internal packag
 shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
 
 - Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images, Deployment Age.
+- Package cells (Platform, KVM, …, Threat Feed v2) are **fixed-height with a
+  vertical scrollbar** (~6 lines) — stacks accumulate dozens of package
+  versions (e.g. SV5 Appliance SF has 43) and would otherwise blow out the row.
+  Pod Images and Deployment Age stay uncapped so they remain aligned
+  line-for-line.
 - Env accents are **green for Prod** and blue for NPE (prod was red until 2026-10-19;
   red reads as "error" in a dashboard).
 - **Pod Images** column shows one running replica per service with a green dot; a red dot

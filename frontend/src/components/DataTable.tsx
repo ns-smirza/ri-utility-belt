@@ -118,7 +118,11 @@ function Cell({
     return <span className="empty-cell">—</span>
   }
   return (
-    <div className="multi-cell">
+    /* pkg-list: capped height + vertical scroll — package dirs accumulate
+       dozens of versions (SV5 aup-sf has 43) and blew out the row height.
+       Pod-images/rollout cells stay uncapped to preserve line-for-line
+       alignment between those two columns. */
+    <div className="multi-cell pkg-list">
       {values.map((v, i) => {
         const tip = titles && titles[i] !== v ? titles[i] : undefined
         return (
