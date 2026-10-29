@@ -30,6 +30,9 @@ export const COLUMNS: Column[] = [
   { key: 'vsp-said', label: 'SAID', kind: 'pkg' },
   { key: 'vpe-content', label: 'Content', kind: 'pkg' },
   { key: 'vpe-geoipdb', label: 'GeoIP DB', kind: 'pkg' },
+  { key: 'aup-sf', label: 'Appliance SF', kind: 'pkg' },
+  { key: 'aup-threatfeed', label: 'Threat Feed', kind: 'pkg' },
+  { key: 'aup-threatfeed-v2', label: 'Threat Feed v2', kind: 'pkg' },
   { key: 'images', label: 'Pod Images', kind: 'images' },
   { key: 'rollout', label: 'Deployment Age', kind: 'rollout' },
 ]
@@ -44,6 +47,9 @@ const STRIP: Record<string, { prefix?: string; suffix?: string }> = {
   'vsp-said': { prefix: 'vsp-said-', suffix: '.pkg' },
   'vpe-content': { prefix: 'vpe-upgrade-content-', suffix: '.pkg' },
   'vpe-geoipdb': { prefix: 'vpe-upgrade-geoipdb-', suffix: '.pkg' },
+  'aup-sf': { prefix: 'appliance-upgrade-sf-', suffix: '.pkg' },
+  'aup-threatfeed': { prefix: 'appliance-upgrade-threat-feed-', suffix: '.pkg' },
+  'aup-threatfeed-v2': { prefix: 'appliance-upgrade-threat-feed-', suffix: '.pkg' },
 }
 
 export function stripVersion(value: string, key: string): string {

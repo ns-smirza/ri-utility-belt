@@ -144,12 +144,19 @@ for kube in *.yaml; do
         "vpe-sf|/opt/ns/downloads/vpe-sf/"
         "kvm|/opt/ns/downloads/vpe-images/kvm/"
         "ova|/opt/ns/downloads/vpe-images/ova/"
+        "aup-sf|/opt/ns/downloads/aup-sf/|\\.pkg$"
+        "aup-threatfeed|/opt/ns/downloads/aup-threatfeed/|\\.pkg$"
+        "aup-threatfeed-v2|/opt/ns/downloads/aup-threatfeed-v2/|\\.pkg$"
       )
       for entry in "${entries[@]}"; do
         catname="${entry%%|*}"
-        path="${entry#*|}"
+        rest="${entry#*|}"
+        path="${rest%%|*}"
+        # Optional 3rd field: grep -E filter for the listing. aup-threatfeed
+        # dirs contain a non-package wget-log alongside the .pkg files.
+        pat="${rest#*|}"; [ "$pat" = "$rest" ] && pat="."
         if [ -d "$path" ]; then
-          ls "$path" 2>/dev/null | sort -V -r | while read -r file; do
+          ls "$path" 2>/dev/null | grep -E "$pat" | sort -V -r | while read -r file; do
             [ -n "$file" ] && printf "PKG|%s|%s\n" "$catname" "$file"
           done
         fi
@@ -219,10 +226,12 @@ BEGIN {
   colname[1]="Stack"; colname[2]="Images"; colname[3]="vsp-ais";
   colname[4]="vsp-said"; colname[5]="vsp-swg"; colname[6]="vpe-content";
   colname[7]="vpe-geoipdb"; colname[8]="vpe-sf"; colname[9]="kvm"; colname[10]="ova";
-  ncols=10
+  colname[11]="aup-sf"; colname[12]="aup-threatfeed"; colname[13]="aup-threatfeed-v2";
+  ncols=13
   colidx["Images"]=2; colidx["vsp-ais"]=3; colidx["vsp-said"]=4; colidx["vsp-swg"]=5;
   colidx["vpe-content"]=6; colidx["vpe-geoipdb"]=7; colidx["vpe-sf"]=8;
   colidx["kvm"]=9; colidx["ova"]=10;
+  colidx["aup-sf"]=11; colidx["aup-threatfeed"]=12; colidx["aup-threatfeed-v2"]=13;
 }
 {
   t=$1
