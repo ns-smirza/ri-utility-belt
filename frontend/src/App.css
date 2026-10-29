@@ -2467,15 +2467,21 @@
 .vcheck-row .prov-input {
   min-width: 180px;
 }
-.vcheck-image-picker {
+.vcheck-picker-groups {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-direction: column;
+  gap: 8px;
 }
-.vcheck-image-picker + .vcheck-rows {
+.vcheck-picker-groups + .vcheck-rows {
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+}
+.vcheck-image-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
 }
 .vcheck-image-check {
   display: inline-flex;
@@ -2519,9 +2525,6 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--muted);
-}
-.vcheck-picker-caption:not(:first-child) {
-  margin-left: 10px;
 }
 .vcheck-picker-btn {
   font-size: 11.5px;

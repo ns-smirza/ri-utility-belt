@@ -179,35 +179,39 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
           </div>
         )}
         <div
-          className="vcheck-image-picker"
+          className="vcheck-picker-groups"
           data-testid="vcheck-image-picker"
           role="group"
           aria-label="Pod images and packages"
         >
-          <span className="vcheck-picker-caption">Images</span>
-          {imageNames.map((name) => renderCheck(name, 'image'))}
-          <span className="vcheck-picker-caption">Packages</span>
-          {pkgKeys.map((key) => renderCheck(key, 'pkg'))}
-          <span className="vcheck-picker-actions">
-            <button
-              type="button"
-              className="vcheck-picker-btn"
-              data-testid="vcheck-select-all"
-              disabled={rows.length === totalPickable}
-              onClick={selectAll}
-            >
-              Select all
-            </button>
-            <button
-              type="button"
-              className="vcheck-picker-btn"
-              data-testid="vcheck-clear-all"
-              disabled={rows.length === 0}
-              onClick={clearAll}
-            >
-              Unselect all
-            </button>
-          </span>
+          <div className="vcheck-image-picker">
+            <span className="vcheck-picker-caption">Images</span>
+            {imageNames.map((name) => renderCheck(name, 'image'))}
+          </div>
+          <div className="vcheck-image-picker">
+            <span className="vcheck-picker-caption">Packages</span>
+            {pkgKeys.map((key) => renderCheck(key, 'pkg'))}
+            <span className="vcheck-picker-actions">
+              <button
+                type="button"
+                className="vcheck-picker-btn"
+                data-testid="vcheck-select-all"
+                disabled={rows.length === totalPickable}
+                onClick={selectAll}
+              >
+                Select all
+              </button>
+              <button
+                type="button"
+                className="vcheck-picker-btn"
+                data-testid="vcheck-clear-all"
+                disabled={rows.length === 0}
+                onClick={clearAll}
+              >
+                Unselect all
+              </button>
+            </span>
+          </div>
         </div>
         {rows.length > 0 && (
           <div className="vcheck-rows">
