@@ -2546,8 +2546,13 @@
   width: 100%;
 }
 .vcheck-picker-table td {
-  padding: 8px 0;
+  /* 16px bottom (+ 8px top of the next row) = 24px between the
+     IMAGES and PACKAGES rows; last row keeps the symmetric 8px. */
+  padding: 8px 0 16px;
   vertical-align: top;
+}
+.vcheck-picker-table tr:last-child td {
+  padding-bottom: 8px;
 }
 .vcheck-pt-check {
   width: 30px;
