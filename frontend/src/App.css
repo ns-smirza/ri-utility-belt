@@ -2538,7 +2538,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text);
+  color: var(--accent);
   cursor: pointer;
   user-select: none;
 }
