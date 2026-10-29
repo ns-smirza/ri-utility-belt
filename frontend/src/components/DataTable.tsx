@@ -1,4 +1,12 @@
-import { Fragment, type ClipboardEvent, type ReactNode, type Ref } from 'react'
+import {
+  Fragment,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type ReactNode,
+  type Ref,
+} from 'react'
 import type { ImageInfo, Stack } from '../types'
 
 interface Props {
@@ -109,10 +117,13 @@ function Cell({
   values,
   query,
   titles,
+  capPx,
 }: {
   values: string[]
   query: string
   titles?: string[]
+  /** Per-row cap: the Pod Images cell's measured height. */
+  capPx?: number | null
 }) {
   if (!values || values.length === 0) {
     return <span className="empty-cell">—</span>
@@ -120,9 +131,14 @@ function Cell({
   return (
     /* pkg-list: capped height + vertical scroll — package dirs accumulate
        dozens of versions (SV5 aup-sf has 43) and blew out the row height.
-       Pod-images/rollout cells stay uncapped to preserve line-for-line
-       alignment between those two columns. */
-    <div className="multi-cell pkg-list">
+       The cap is the row's Pod Images cell height (inline style; the CSS
+       124px is just the pre-measure fallback), so a long package list
+       scrolls to exactly the pod list's height. Pod-images/rollout cells
+       stay uncapped to preserve line-for-line alignment. */
+    <div
+      className="multi-cell pkg-list"
+      style={capPx ? { maxHeight: capPx } : undefined}
+    >
       {values.map((v, i) => {
         const tip = titles && titles[i] !== v ? titles[i] : undefined
         return (
@@ -135,12 +151,21 @@ function Cell({
   )
 }
 
-function ImagesCell({ images, query }: { images: ImageInfo[]; query: string }) {
+function ImagesCell({
+  images,
+  query,
+  innerRef,
+}: {
+  images: ImageInfo[]
+  query: string
+  /** Ref on the .multi-cell div so the row can measure its height. */
+  innerRef?: Ref<HTMLDivElement>
+}) {
   if (!images || images.length === 0) {
     return <span className="empty-cell">—</span>
   }
   return (
-    <div className="multi-cell">
+    <div className="multi-cell" ref={innerRef}>
       {images.map((im, i) => (
         <div key={i} className="cell-line pod-line">
           <span className="pod-dot-wrap" data-testid={`pod-dot-${i}`}>
@@ -230,6 +255,95 @@ export function handleMultiCellCopy(e: ClipboardEvent<HTMLElement>) {
   e.clipboardData.setData('text/html', lines.map(escapeHtml).join('<br>'))
 }
 
+/** One stack row. Measures the Pod Images cell (uncapped — it drives the
+    row height) and caps this row's package cells at that measured height,
+    so a scrolling package list is exactly as tall as the pod list beside
+    it. ResizeObserver re-measures when a data refresh changes the pod
+    count; before the first measurement the CSS 124px fallback applies. */
+function StackRow({
+  s,
+  query,
+  fullVersions,
+}: {
+  s: Stack
+  query: string
+  fullVersions: boolean
+}) {
+  const sid = sanitize(s.name)
+  const imgRef = useRef<HTMLDivElement | null>(null)
+  const [cap, setCap] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const el = imgRef.current
+    if (!el) {
+      setCap(null) // no pod images (empty cell) — keep the CSS fallback
+      return
+    }
+    const update = () => setCap(el.offsetHeight)
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [s.images.length])
+  return (
+    <tr data-testid={`row-${sid}`}>
+      {COLUMNS.map((c) => {
+        const testId = `cell-${sid}-${c.key}`
+        if (c.kind === 'stack') {
+          return (
+            <td key={c.key} className="stack-cell" data-testid={testId}>
+              <span
+                className="stack-display"
+                data-testid={`stack-name-${sid}`}
+                title={s.name}
+              >
+                {highlight(s.displayName || s.name, query)}
+              </span>
+            </td>
+          )
+        }
+        if (c.kind === 'env') {
+          return (
+            <td key={c.key} data-testid={testId}>
+              <span
+                className={`env-badge env-${s.env}`}
+                data-testid={`env-badge-${sid}`}
+              >
+                {s.env}
+              </span>
+            </td>
+          )
+        }
+        if (c.kind === 'images') {
+          return (
+            <td key={c.key} data-testid={testId}>
+              <ImagesCell images={s.images} query={query} innerRef={imgRef} />
+            </td>
+          )
+        }
+        if (c.kind === 'rollout') {
+          return (
+            <td key={c.key} data-testid={testId}>
+              <RolloutCell images={s.images} />
+            </td>
+          )
+        }
+        const raw = s.packages[c.key] ?? []
+        const display = fullVersions ? raw : raw.map((v) => stripVersion(v, c.key))
+        return (
+          <td key={c.key} data-testid={testId}>
+            <Cell
+              values={display}
+              query={query}
+              titles={fullVersions ? undefined : raw}
+              capPx={cap}
+            />
+          </td>
+        )
+      })}
+    </tr>
+  )
+}
+
 export function DataTable({ stacks, refreshing, query, fullVersions, tableRef, scrollRef }: Props) {
   return (
     <div className="table-card" data-testid="table-card" onCopy={handleMultiCellCopy}>
@@ -258,66 +372,9 @@ export function DataTable({ stacks, refreshing, query, fullVersions, tableRef, s
                 </td>
               </tr>
             )}
-            {stacks.map((s) => {
-              const sid = sanitize(s.name)
-              return (
-                <tr key={s.name} data-testid={`row-${sid}`}>
-                  {COLUMNS.map((c) => {
-                    const testId = `cell-${sid}-${c.key}`
-                    if (c.kind === 'stack') {
-                      return (
-                        <td key={c.key} className="stack-cell" data-testid={testId}>
-                          <span
-                            className="stack-display"
-                            data-testid={`stack-name-${sid}`}
-                            title={s.name}
-                          >
-                            {highlight(s.displayName || s.name, query)}
-                          </span>
-                        </td>
-                      )
-                    }
-                    if (c.kind === 'env') {
-                      return (
-                        <td key={c.key} data-testid={testId}>
-                          <span
-                            className={`env-badge env-${s.env}`}
-                            data-testid={`env-badge-${sid}`}
-                          >
-                            {s.env}
-                          </span>
-                        </td>
-                      )
-                    }
-                    if (c.kind === 'images') {
-                      return (
-                        <td key={c.key} data-testid={testId}>
-                          <ImagesCell images={s.images} query={query} />
-                        </td>
-                      )
-                    }
-                    if (c.kind === 'rollout') {
-                      return (
-                        <td key={c.key} data-testid={testId}>
-                          <RolloutCell images={s.images} />
-                        </td>
-                      )
-                    }
-                    const raw = s.packages[c.key] ?? []
-                    const display = fullVersions ? raw : raw.map((v) => stripVersion(v, c.key))
-                    return (
-                      <td key={c.key} data-testid={testId}>
-                        <Cell
-                          values={display}
-                          query={query}
-                          titles={fullVersions ? undefined : raw}
-                        />
-                      </td>
-                    )
-                  })}
-                </tr>
-              )
-            })}
+            {stacks.map((s) => (
+              <StackRow key={s.name} s={s} query={query} fullVersions={fullVersions} />
+            ))}
           </tbody>
         </table>
       </div>

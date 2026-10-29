@@ -1080,8 +1080,11 @@
   display: block;
 }
 
-/* Package cells: fixed height with vertical scroll (~6 lines), so a stack
-   with dozens of versions (e.g. SV5 aup-sf) doesn't blow out the row. */
+/* Package cells: capped height with vertical scroll, so a stack with dozens
+   of versions (e.g. SV5 aup-sf) doesn't blow out the row. Each row caps its
+   package cells at that row's Pod Images cell height via an inline style
+   (see StackRow in DataTable.tsx); 124px here is just the fallback before
+   the first measurement or when a stack has no pod images. */
 .multi-cell.pkg-list {
   max-height: 124px;
   overflow-y: auto;
