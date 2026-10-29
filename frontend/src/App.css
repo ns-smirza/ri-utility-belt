@@ -2601,11 +2601,19 @@
   color: var(--text);
   white-space: nowrap;
 }
+/* Pill strip: single line, horizontal scroll when versions overflow —
+   packages accumulate dozens of versions and wrapping grew the row. */
 .vcheck-pills {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 5px;
+  overflow-x: auto;
+  padding-bottom: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 .vcheck-pill {
   font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;

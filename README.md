@@ -57,9 +57,10 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   all keeps versions already typed). Row labels are fixed-width so all version
   boxes line up vertically. Once an item is ticked, version suggestions appear
   as **pill buttons** next to the box — images list every observed tag
-  (most-common first), packages show **at most the 3 latest** compact versions
-  to avoid clutter (hover shows the stack count) — click one to
-  fill the version, or type any custom version. Every row with a version set
+  (most-common first), packages list **all** compact versions latest-first in
+  a **horizontally scrolling** strip so long histories don't grow the row
+  (hover shows the stack count) — click one to fill the version, or type any
+  custom version. Every row with a version set
   becomes a row in one shared table — row header is `name:version`, with
   **Exists** and **Does Not Exist** columns listing stacks as env-tinted chips
   that wrap horizontally (count shown per cell; a stack on another version

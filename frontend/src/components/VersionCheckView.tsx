@@ -16,10 +16,6 @@ interface Props {
   refreshing: boolean
 }
 
-/** Package rows offer at most this many version pills (latest first) —
-    packages accumulate dozens of versions, showing all would be clutter. */
-const MAX_PKG_PILLS = 3
-
 /** Numeric-aware version compare: "3.531" > "3.524", "139.x" > "77.x". */
 function cmpVer(a: string, b: string): number {
   const pa = a.split(/[^0-9]+/).filter(Boolean).map(Number)
@@ -121,9 +117,9 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
     return out
   }, [stacks])
 
-  // Distinct compact versions per package, latest first, capped — packages
-  // hold long histories, so pills show only the newest few. Versions are
-  // compared in the same compact form the main table displays.
+  // Distinct compact versions per package, latest first. Packages hold long
+  // histories, so the pill strip scrolls horizontally instead of wrapping
+  // (all versions stay reachable without growing the row's height).
   const pkgVersionLists = useMemo(() => {
     const map = new Map<string, Map<string, number>>()
     for (const s of stacks)
@@ -140,8 +136,7 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
         k,
         [...m.entries()]
           .map(([tag, count]) => ({ tag, count }))
-          .sort((a, b) => cmpVer(b.tag, a.tag))
-          .slice(0, MAX_PKG_PILLS),
+          .sort((a, b) => cmpVer(b.tag, a.tag)),
       )
     return out
   }, [stacks, pkgKeys])
