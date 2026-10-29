@@ -41,6 +41,7 @@ export const COLUMNS: Column[] = [
   { key: 'aup-sf', label: 'Appliance SF', kind: 'pkg' },
   { key: 'aup-threatfeed', label: 'Threat Feed', kind: 'pkg' },
   { key: 'aup-threatfeed-v2', label: 'Threat Feed v2', kind: 'pkg' },
+  { key: 'aup-urldb', label: 'URL DB', kind: 'pkg' },
   { key: 'images', label: 'Pod Images', kind: 'images' },
   { key: 'rollout', label: 'Deployment Age', kind: 'rollout' },
 ]
@@ -64,6 +65,10 @@ const STRIP: Record<string, { prefix?: string | string[]; suffix?: string }> = {
   },
   'aup-threatfeed-v2': {
     prefix: ['appliance-upgrade-threat-feed-', 'appliance-upgrade-'],
+    suffix: '.pkg',
+  },
+  'aup-urldb': {
+    prefix: ['appliance-upgrade-urldb-', 'appliance-upgrade-'],
     suffix: '.pkg',
   },
 }

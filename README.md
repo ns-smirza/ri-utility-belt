@@ -20,7 +20,7 @@ adding a new utility is a one-line entry in the view registry (see
 Per-Rancher-cluster view of the running **pod images** and the **internal packages**
 shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
 
-- Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Pod Images, Deployment Age.
+- Columns: Stack, Env, Platform (vpe-sf), KVM, OVA, SWG, AIS, SAID, Content, GeoIP DB, Appliance SF, Threat Feed, Threat Feed v2, URL DB, Pod Images, Deployment Age.
 - Package cells (Platform, KVM, …, Threat Feed v2) are **capped with a
   vertical scrollbar** — stacks accumulate dozens of package versions
   (e.g. SV5 Appliance SF has 43) and would otherwise blow out the row. The
