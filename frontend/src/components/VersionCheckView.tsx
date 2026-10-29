@@ -76,11 +76,19 @@ function GroupCheck({
 export function VersionCheckView({ stacks, refreshing }: Props) {
   const [rows, setRows] = useState<Row[]>([])
 
-  // Union of pod image names across all stacks, sorted — the checkbox source.
+  // Union of pod image names across all stacks — the checkbox source.
+  // MP-side services lead the list, the rest follow alphabetically.
   const imageNames = useMemo(() => {
+    const FIRST = ['callhome', 'logwatcher', 'nslogcollector']
     const set = new Set<string>()
     for (const s of stacks) s.images.forEach((im) => set.add(imageName(im.image)))
-    return [...set].sort()
+    return [...set].sort((a, b) => {
+      const ia = FIRST.indexOf(a)
+      const ib = FIRST.indexOf(b)
+      if (ia !== -1 || ib !== -1)
+        return (ia === -1 ? FIRST.length : ia) - (ib === -1 ? FIRST.length : ib)
+      return a.localeCompare(b)
+    })
   }, [stacks])
 
   // Package categories present in the data, in main-table column order.
