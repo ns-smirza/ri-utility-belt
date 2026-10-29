@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Stack } from '../types'
 import { imageName, imageTag } from './CompareView'
 import { COLUMNS, stripVersion } from './DataTable'
@@ -29,6 +29,41 @@ function cmpVer(a: string, b: string): number {
     if (d) return d
   }
   return a.localeCompare(b)
+}
+
+/** Group-level toggle before each picker caption. Tri-state: checked when
+    every item in the group is selected, indeterminate dash when some are.
+    Plain box + divider, deliberately not a pill like the item checkboxes. */
+function GroupCheck({
+  label,
+  names,
+  rows,
+  onToggle,
+}: {
+  label: string
+  names: string[]
+  rows: Row[]
+  onToggle: () => void
+}) {
+  const ref = useRef<HTMLInputElement | null>(null)
+  const checkedCount = names.filter((n) => rows.some((r) => r.image === n)).length
+  const all = names.length > 0 && checkedCount === names.length
+  const some = checkedCount > 0 && !all
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = some
+  }, [some])
+  return (
+    <label className="vcheck-group-check" data-testid={`vcheck-group-${label.toLowerCase()}`}>
+      <input
+        ref={ref}
+        type="checkbox"
+        checked={all}
+        onChange={onToggle}
+        aria-label={`Select all ${label}`}
+      />
+      {label}
+    </label>
+  )
 }
 
 // Per-image/package version compliance: a horizontal checkbox strip lists
@@ -118,6 +153,19 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
       ].map(({ name, kind }) => cur.find((r) => r.image === name) ?? { image: name, version: '', kind }),
     )
   const clearAll = () => setRows([])
+  // Group toggle: check = select every item in the group (keeping versions
+  // already typed), uncheck = clear just that group. Group order is kept
+  // stable: images before packages.
+  const toggleGroup = (names: string[], kind: Row['kind']) =>
+    setRows((cur) => {
+      const allIn = names.every((n) => cur.some((r) => r.image === n))
+      if (allIn) return cur.filter((r) => !names.includes(r.image))
+      const others = cur.filter((r) => !names.includes(r.image))
+      const group = names.map(
+        (n) => cur.find((r) => r.image === n) ?? { image: n, version: '', kind },
+      )
+      return kind === 'image' ? [...group, ...others] : [...others, ...group]
+    })
   const updateRow = (i: number, patch: Partial<Row>) =>
     setRows((cur) => cur.map((r, j) => (j === i ? { ...r, ...patch } : r)))
 
@@ -185,11 +233,21 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
           aria-label="Pod images and packages"
         >
           <div className="vcheck-image-picker">
-            <span className="vcheck-picker-caption">Images</span>
+            <GroupCheck
+              label="Images"
+              names={imageNames}
+              rows={rows}
+              onToggle={() => toggleGroup(imageNames, 'image')}
+            />
             {imageNames.map((name) => renderCheck(name, 'image'))}
           </div>
           <div className="vcheck-image-picker">
-            <span className="vcheck-picker-caption">Packages</span>
+            <GroupCheck
+              label="Packages"
+              names={pkgKeys}
+              rows={rows}
+              onToggle={() => toggleGroup(pkgKeys, 'pkg')}
+            />
             {pkgKeys.map((key) => renderCheck(key, 'pkg'))}
           </div>
           <div className="vcheck-picker-actions">
