@@ -27,15 +27,18 @@ function cmpVer(a: string, b: string): number {
   return a.localeCompare(b)
 }
 
-/** Group-level toggle before each picker caption. Tri-state: checked when
-    every item in the group is selected, indeterminate dash when some are.
-    Plain box + divider, deliberately not a pill like the item checkboxes. */
+/** Group-level tri-state checkbox — column 1 of the picker table. Checked
+    when every item in the group is selected, indeterminate dash when some
+    are. Plain box, deliberately not a pill like the item checkboxes. The
+    caption is a separate <label htmlFor> in column 2. */
 function GroupCheck({
+  id,
   label,
   names,
   rows,
   onToggle,
 }: {
+  id: string
   label: string
   names: string[]
   rows: Row[]
@@ -49,16 +52,16 @@ function GroupCheck({
     if (ref.current) ref.current.indeterminate = some
   }, [some])
   return (
-    <label className="vcheck-group-check" data-testid={`vcheck-group-${label.toLowerCase()}`}>
-      <input
-        ref={ref}
-        type="checkbox"
-        checked={all}
-        onChange={onToggle}
-        aria-label={`Select all ${label}`}
-      />
-      {label}
-    </label>
+    <input
+      ref={ref}
+      id={id}
+      className="vcheck-group-box"
+      data-testid={`vcheck-group-${label.toLowerCase()}`}
+      type="checkbox"
+      checked={all}
+      onChange={onToggle}
+      aria-label={`Select all ${label}`}
+    />
   )
 }
 
@@ -235,24 +238,50 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
           role="group"
           aria-label="Pod images and packages"
         >
-          <div className="vcheck-image-picker">
-            <GroupCheck
-              label="Images"
-              names={imageNames}
-              rows={rows}
-              onToggle={() => toggleGroup(imageNames, 'image')}
-            />
-            {imageNames.map((name) => renderCheck(name, 'image'))}
-          </div>
-          <div className="vcheck-image-picker">
-            <GroupCheck
-              label="Packages"
-              names={pkgKeys}
-              rows={rows}
-              onToggle={() => toggleGroup(pkgKeys, 'pkg')}
-            />
-            {pkgKeys.map((key) => renderCheck(key, 'pkg'))}
-          </div>
+          {/* Headerless 3-column table: group tri-state checkbox | build
+              type caption | the group's item checkboxes. */}
+          <table className="vcheck-picker-table">
+            <tbody>
+              <tr>
+                <td className="vcheck-pt-check">
+                  <GroupCheck
+                    id="vcheck-group-images-box"
+                    label="Images"
+                    names={imageNames}
+                    rows={rows}
+                    onToggle={() => toggleGroup(imageNames, 'image')}
+                  />
+                </td>
+                <td className="vcheck-pt-type">
+                  <label htmlFor="vcheck-group-images-box">Images</label>
+                </td>
+                <td className="vcheck-pt-items">
+                  <div className="vcheck-image-picker">
+                    {imageNames.map((name) => renderCheck(name, 'image'))}
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td className="vcheck-pt-check">
+                  <GroupCheck
+                    id="vcheck-group-packages-box"
+                    label="Packages"
+                    names={pkgKeys}
+                    rows={rows}
+                    onToggle={() => toggleGroup(pkgKeys, 'pkg')}
+                  />
+                </td>
+                <td className="vcheck-pt-type">
+                  <label htmlFor="vcheck-group-packages-box">Packages</label>
+                </td>
+                <td className="vcheck-pt-items">
+                  <div className="vcheck-image-picker">
+                    {pkgKeys.map((key) => renderCheck(key, 'pkg'))}
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
           <div className="vcheck-picker-actions">
             <button
               type="button"

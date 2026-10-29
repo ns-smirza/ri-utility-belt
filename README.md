@@ -56,9 +56,10 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   A **Rows ▾** dropdown above the table lists every row header with a checkbox
   (all on by default); unchecking hides those rows. Compare state is
   session-only — a page reload starts fresh. Pure frontend — reuses `/api/data`.
-- **Version Check view** (the **Versions** tab): a horizontal strip of
-  **checkboxes — one per pod image, one per package category** (grouped
-  "Images" / "Packages"). Ticking one adds a control row (static label +
+- **Version Check view** (the **Versions** tab): a headerless 3-column
+  picker table — **group tri-state checkbox | build type (IMAGES /
+  PACKAGES) | that group's item checkboxes**, one per pod image or package
+  category. Ticking an item adds a control row (static label +
   free-text version box), unticking removes it;
   **Select all** / **Unselect all** buttons toggle the whole strip (selecting
   all keeps versions already typed). Row labels are fixed-width so all version
