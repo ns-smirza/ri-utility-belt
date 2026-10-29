@@ -191,26 +191,26 @@ export function VersionCheckView({ stacks, refreshing }: Props) {
           <div className="vcheck-image-picker">
             <span className="vcheck-picker-caption">Packages</span>
             {pkgKeys.map((key) => renderCheck(key, 'pkg'))}
-            <span className="vcheck-picker-actions">
-              <button
-                type="button"
-                className="vcheck-picker-btn"
-                data-testid="vcheck-select-all"
-                disabled={rows.length === totalPickable}
-                onClick={selectAll}
-              >
-                Select all
-              </button>
-              <button
-                type="button"
-                className="vcheck-picker-btn"
-                data-testid="vcheck-clear-all"
-                disabled={rows.length === 0}
-                onClick={clearAll}
-              >
-                Unselect all
-              </button>
-            </span>
+          </div>
+          <div className="vcheck-picker-actions">
+            <button
+              type="button"
+              className="vcheck-picker-btn"
+              data-testid="vcheck-select-all"
+              disabled={rows.length === totalPickable}
+              onClick={selectAll}
+            >
+              Select all
+            </button>
+            <button
+              type="button"
+              className="vcheck-picker-btn"
+              data-testid="vcheck-clear-all"
+              disabled={rows.length === 0}
+              onClick={clearAll}
+            >
+              Unselect all
+            </button>
           </div>
         </div>
         {rows.length > 0 && (

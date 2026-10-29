@@ -2470,7 +2470,7 @@
 .vcheck-picker-groups {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
 }
 .vcheck-picker-groups + .vcheck-rows {
   margin-top: 12px;
@@ -2514,9 +2514,8 @@
   cursor: pointer;
 }
 .vcheck-picker-actions {
-  display: inline-flex;
+  display: flex;
   gap: 6px;
-  margin-left: auto;
 }
 .vcheck-picker-caption {
   align-self: center;
