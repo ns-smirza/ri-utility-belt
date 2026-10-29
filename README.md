@@ -50,18 +50,21 @@ shipped in the `artifactservice` pod, across all stacks in `~/rancher/*.yaml`.
   (all on by default); unchecking hides those rows. Compare state is
   session-only — a page reload starts fresh. Pure frontend — reuses `/api/data`.
 - **Version Check view** (the **Versions** tab): a horizontal strip of
-  **checkboxes, one per pod image** — ticking an image adds a control row
-  (static image label + free-text version box), unticking removes it;
+  **checkboxes — one per pod image, one per package category** (grouped
+  "Images" / "Packages"). Ticking one adds a control row (static label +
+  free-text version box), unticking removes it;
   **Select all** / **Unselect all** buttons toggle the whole strip (selecting
   all keeps versions already typed). Row labels are fixed-width so all version
-  boxes line up vertically. Once an image is ticked, its observed tags appear
-  as **pill buttons** next to the version box (most-common first, hover shows
-  the stack count) — click one to
+  boxes line up vertically. Once an item is ticked, version suggestions appear
+  as **pill buttons** next to the box — images list every observed tag
+  (most-common first), packages show **at most the 3 latest** compact versions
+  to avoid clutter (hover shows the stack count) — click one to
   fill the version, or type any custom version. Every row with a version set
-  becomes a row in one shared table — row header is `image:version`, with
+  becomes a row in one shared table — row header is `name:version`, with
   **Exists** and **Does Not Exist** columns listing stacks as env-tinted chips
-  that wrap horizontally (count shown per cell; a stack on another tag shows
-  its actual tag, e.g. `MEL2 (1.0.37)`). The header **All / Prod / NPE** tabs
+  that wrap horizontally (count shown per cell; a stack on another version
+  shows it, e.g. `MEL2 (1.0.37)` — for packages, only that stack's **latest**
+  version). The header **All / Prod / NPE** tabs
   also apply here, scoping the checkboxes and chips to that environment.
   Session-only state, pure frontend — reuses `/api/data`.
 - All-tab ordering: prod stacks first, NPE (QA01/STG01/DEVINT/NPE02/FED1MP/PERF01) last.

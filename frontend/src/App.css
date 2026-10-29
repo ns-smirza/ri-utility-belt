@@ -2512,6 +2512,17 @@
   gap: 6px;
   margin-left: auto;
 }
+.vcheck-picker-caption {
+  align-self: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+}
+.vcheck-picker-caption:not(:first-child) {
+  margin-left: 10px;
+}
 .vcheck-picker-btn {
   font-size: 11.5px;
   font-weight: 600;
