@@ -37,8 +37,10 @@ export const COLUMNS: Column[] = [
   { key: 'rollout', label: 'Deployment Age', kind: 'rollout' },
 ]
 
-// Per-column prefix/suffix to strip in the compact (default) view.
-const STRIP: Record<string, { prefix?: string; suffix?: string }> = {
+// Per-column prefix/suffix to strip in the compact (default) view. `prefix`
+// may be a list — tried in order, first match wins (some aup-* files drop the
+// category infix, e.g. "appliance-upgrade-66.5.0.pkg" in the threatfeed dir).
+const STRIP: Record<string, { prefix?: string | string[]; suffix?: string }> = {
   'vpe-sf': { prefix: 'vpe-upgrade-sf-', suffix: '.pkg' },
   kvm: { prefix: 'NSKVM-', suffix: '.zip' },
   ova: { prefix: 'NSOVA-', suffix: '.zip' },
@@ -47,16 +49,28 @@ const STRIP: Record<string, { prefix?: string; suffix?: string }> = {
   'vsp-said': { prefix: 'vsp-said-', suffix: '.pkg' },
   'vpe-content': { prefix: 'vpe-upgrade-content-', suffix: '.pkg' },
   'vpe-geoipdb': { prefix: 'vpe-upgrade-geoipdb-', suffix: '.pkg' },
-  'aup-sf': { prefix: 'appliance-upgrade-sf-', suffix: '.pkg' },
-  'aup-threatfeed': { prefix: 'appliance-upgrade-threat-feed-', suffix: '.pkg' },
-  'aup-threatfeed-v2': { prefix: 'appliance-upgrade-threat-feed-', suffix: '.pkg' },
+  'aup-sf': { prefix: ['appliance-upgrade-sf-', 'appliance-upgrade-'], suffix: '.pkg' },
+  'aup-threatfeed': {
+    prefix: ['appliance-upgrade-threat-feed-', 'appliance-upgrade-'],
+    suffix: '.pkg',
+  },
+  'aup-threatfeed-v2': {
+    prefix: ['appliance-upgrade-threat-feed-', 'appliance-upgrade-'],
+    suffix: '.pkg',
+  },
 }
 
 export function stripVersion(value: string, key: string): string {
   const s = STRIP[key]
   if (!s) return value
   let out = value
-  if (s.prefix && out.startsWith(s.prefix)) out = out.slice(s.prefix.length)
+  const prefixes = Array.isArray(s.prefix) ? s.prefix : s.prefix ? [s.prefix] : []
+  for (const p of prefixes) {
+    if (out.startsWith(p)) {
+      out = out.slice(p.length)
+      break
+    }
+  }
   if (s.suffix && out.endsWith(s.suffix)) out = out.slice(0, out.length - s.suffix.length)
   // drop a leading develop-branch tag like "1.develop-" (e.g. qa01 builds)
   out = out.replace(/^\d+\.develop-/, '')
