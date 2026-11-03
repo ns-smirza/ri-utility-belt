@@ -2554,16 +2554,17 @@
 .vcheck-picker-table tr:last-child td {
   padding-bottom: 8px;
 }
-.vcheck-pt-check {
+/* td.<class> (not just .<class>) so these beat the td shorthand above. */
+.vcheck-picker-table td.vcheck-pt-check {
   width: 30px;
   /* extra top pad aligns the 14px box with the first item-pill row */
   padding-top: 13px;
 }
-.vcheck-pt-type {
+.vcheck-picker-table td.vcheck-pt-type {
   width: 100px;
   padding-top: 11px;
 }
-.vcheck-pt-type label {
+.vcheck-picker-table td.vcheck-pt-type label {
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
@@ -2572,7 +2573,7 @@
   cursor: pointer;
   user-select: none;
 }
-.vcheck-pt-items {
+.vcheck-picker-table td.vcheck-pt-items {
   width: 100%;
   padding-left: 12px;
   border-left: 1px solid var(--border);
